@@ -42,13 +42,16 @@ namespace Rokas.Presentation
         private RectTransform root;
         private RawImage lyingPov, armPov, blurredPov, real3DArmPov;
         private RokasBedSleepProductionRigBridge productionRig;
-        private Image curtain, topEyelid, bottomEyelid, entryCurtain;
+        private Image curtain, entryCurtain;
         private RokasKeikoDreamLoop keikoDream;
         private RokasSleepEyeAperture eyeAperture;
         private AudioSource keikoDreamAudio;
         private AudioClip keikoDreamClip;
         private RenderTexture runtimeBlur;
         private bool wakingReveal;
+        private bool warnedMissingVisionMask;
+        private bool warnedHiddenVisionMask;
+        private float lastEyeClosure;
         private CanvasGroup alarmControls, watchControls;
         private Text currentClock, selectedDuration, wakeClock, alarmHint;
         private Button alarmButton, confirmButton, focusButton, exitBedButton;
@@ -70,7 +73,7 @@ namespace Rokas.Presentation
         // still advances the chosen 1-12 in-game hours once, not in real time.
         // User-approved dream is ONE short 7s sequence, not 3 repeated
         // cycles (old V4 kept the source 7.2s loop running for ~22 seconds).
-        private const float RestingInDarkSeconds = 4.05f;
+        private const float RestingInDarkSeconds = 3.80f;
         private float lastRecordedWheelTime = -10f;
         private Coroutine sequence;
         private State state = State.Idle;
@@ -621,21 +624,15 @@ namespace Rokas.Presentation
             exitBedButton = ui.Button(root, "ReturnFromBed",
                 "ВСТАТЬ / ESC", 1549, 65, 274, 59, Cancel);
 
-            topEyelid = ui.Box(root, "BedSleepUpperEyelid",
-                0, 0, 1920, 0, Color.black);
-            bottomEyelid = ui.Box(root, "BedSleepLowerEyelid",
-                0, 1080, 1920, 0, Color.black);
+            // No legacy rectangular bars: the mask is the only source of
+            // eye closure. The normal curtain is for video/scene handoff.
             curtain = ui.Box(root, "BedSleepLaptopStyleDarkCurtain",
                 0, 0, 1920, 1080,
                 new Color(.008f, .013f, .021f, 0f), false);
             // Transparent end-of-frame curtain never blocks the watch.
             curtain.raycastTarget = false;
-            // Black bars are replaced by two organic elliptical apertures.
-            // We retain the old components as a fallback, but disable them
-            // when the curved face-mask is successfully constructed.
             eyeAperture = new RokasSleepEyeAperture(root);
-            if (topEyelid != null) topEyelid.enabled = false;
-            if (bottomEyelid != null) bottomEyelid.enabled = false;
+            eyeAperture.SetVisible(true);
             keikoDream = new RokasKeikoDreamLoop(root); // hidden until sleeping
             // Independent streaming-audio fallback: Unity VideoPlayer sometimes
             // renders the clip while losing its embedded AAC audio on Windows.
@@ -786,7 +783,15 @@ namespace Rokas.Presentation
             yield return FadeArm(1f, 0f, .76f);
             yield return Wait(.30f);
             state = State.EyesClose;
-            if (eyeAperture != null) eyeAperture.BringToFront();
+            // Never fade a fullscreen black rectangle while the character
+            // is actually closing the two binocular eye apertures.
+            if (curtain != null)
+                curtain.color = new Color(.008f, .013f, .021f, 0f);
+            if (eyeAperture != null)
+            {
+                eyeAperture.SetVisible(true);
+                eyeAperture.BringToFront();
+            }
             backgroundAudio?.SetBedSleepMusicDucking(true);
             // Sound when sleep is the player's natural settling/yawn. Trigger
             // ONCE at the start of lying down; not on a watch UI button.
@@ -797,9 +802,8 @@ namespace Rokas.Presentation
             yield return Wait(settlingToSleepClip != null ?
                 Mathf.Max(.20f, settlingToSleepClip.length - .12f) : .65f);
             if (eyeAperture != null) eyeAperture.BringToFront();
-            yield return FadeEyelids(0f, 1f,
-                (quietMask & 2) != 0 ? 1.65f : 1.50f);
-            yield return Wait(.22f);
+            yield return FadeEyelids(0f, 1f, 1.85f);
+            yield return Wait(.30f);
             // Keep a solid black bed background behind the author video,
             // including its exit dissolve and dark pause. It must NOT
             // crossfade to the ceiling before the real alarm begins.
@@ -863,19 +867,19 @@ namespace Rokas.Presentation
             {
                 // Slow dissolve into the authored dreaming animation;
                 // sound follows the SAME curve for clean, seamless entry.
-                // End more softly, without another loop of the 7.2s clip:
-                // 0.90s entry + 4.05s hold + 1.90s exit = 6.85s.
-                // Picture and recorded audio follow the same fade curve.
+                // Smoothly exit before the original ~7.2s loop repeats:
+                // 0.90s entry + 3.80s hold + 2.20s exit = 6.90s.
+                // Original soundtrack and picture use the identical curve.
                 yield return FadeDream(0f, 1f, .90f);
                 yield return Wait(RestingInDarkSeconds);
-                yield return FadeDream(1f, 0f, 1.90f);
+                yield return FadeDream(1f, 0f, 2.20f);
                 if (keikoDreamAudio != null) keikoDreamAudio.Stop();
                 keikoDream.End();
             }
             else yield return Wait(RestingInDarkSeconds);
             // Let the completely closed eyelids stay black for a beat AFTER
             // Keiko's final cloud disappears, BEFORE the alarm rings.
-            yield return Wait(.85f);
+            yield return Wait(.45f);
             // Important: the DREAM is layered on top of eye closure. Bring
             // the translucent two-oval eye mask over the ceiling BEFORE
             // sounding the real alarm and opening Keiko's eyes.
@@ -912,7 +916,7 @@ namespace Rokas.Presentation
                 blurredPov.color = new Color(1f,1f,1f,.88f);
             // Make two curved half-oval openings visible with a blurred
             // ceiling beneath. A longer natural blink removes hard cuts.
-            yield return FadeEyelids(1f, 0f, 2.85f);
+            yield return FadeEyelids(1f, 0f, 3.10f);
             wakingReveal = false;
             if (blurredPov != null)
                 blurredPov.color = new Color(1f,1f,1f,0f);
@@ -927,7 +931,7 @@ namespace Rokas.Presentation
             // bed: two real semioval lids, then a full black curtain before
             // transitioning to the unaltered original Hub.
             if (eyeAperture != null) eyeAperture.BringToFront();
-            yield return FadeEyelids(0f, 1f, .85f);
+            yield return FadeEyelids(0f, 1f, 1.35f);
             yield return ExitBedToHub();
         }
 
@@ -1053,6 +1057,16 @@ namespace Rokas.Presentation
 
         private IEnumerator FadeEyelids(float from, float to, float duration)
         {
+            if (eyeAperture != null)
+            {
+                eyeAperture.SetVisible(true);
+                eyeAperture.BringToFront();
+                if (!eyeAperture.IsVisible && !warnedHiddenVisionMask)
+                {
+                    Debug.LogError("[ROKAS BINOCULAR V10] Eye Canvas is not visible at transition start.");
+                    warnedHiddenVisionMask = true;
+                }
+            }
             for (float t = 0; t < duration; t += Mathf.Max(
                 Time.unscaledDeltaTime, .002f))
             {
@@ -1072,20 +1086,17 @@ namespace Rokas.Presentation
 
         private void SetEyelids(float closure)
         {
+            lastEyeClosure = Mathf.Clamp01(closure);
             if (eyeAperture != null)
             {
-                eyeAperture.SetOpen(1f - Mathf.Clamp01(closure));
+                eyeAperture.SetOpen(1f - lastEyeClosure);
                 return;
             }
-            float height = 540f * Mathf.Clamp01(closure);
-            if (topEyelid != null)
-                topEyelid.rectTransform.sizeDelta = new Vector2(1920, height);
-            if (bottomEyelid != null)
+            if (!warnedMissingVisionMask)
             {
-                bottomEyelid.rectTransform.sizeDelta =
-                    new Vector2(1920, height);
-                bottomEyelid.rectTransform.anchoredPosition =
-                    new Vector2(0f, -1080f + height);
+                warnedMissingVisionMask = true;
+                Debug.LogError("[ROKAS BINOCULAR V10] Missing dual-oval mask; " +
+                    "rectangular fallback is forbidden. Check Unity Console.");
             }
         }
 
@@ -1176,11 +1187,14 @@ namespace Rokas.Presentation
         {
             if (curtain != null)
             {
-                // Real opaque black transition on rising, not just an
-                // immediate visual swap hidden behind the eyelid mask.
+                // After two eye lenses are CLOSED the player already sees
+                // black: transfer ownership to the normal curtain instantly.
+                // Early ESC still gets the original smooth curtain transition.
                 curtain.transform.SetAsLastSibling();
-                float start = curtain.color.a;
-                yield return FadeCurtain(start, 1f, .94f);
+                if (lastEyeClosure >= .995f)
+                    curtain.color = new Color(.008f,.013f,.021f,1f);
+                else
+                    yield return FadeCurtain(curtain.color.a, 1f, .94f);
             }
             if (cancelRequested && audio != null && sitOnBedClip != null)
             {
