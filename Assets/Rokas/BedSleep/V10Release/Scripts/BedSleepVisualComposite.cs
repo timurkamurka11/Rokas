@@ -30,6 +30,11 @@ namespace Rokas.BedSleep.V10Release
         [SerializeField] private GameObject _armPrefab;
         [SerializeField] private GameObject _watchPrefab;
 
+        // Exposed directly to the ROKAS bridge. The old reflection-only
+        // bridge could not prove that the standalone build installed Argon.
+        public bool ArgonFullVisualActive => _argonFullVisualActive;
+        public string ArgonVisualStatus => _argonFullVisualActive
+            ? "ARGON_FULL_ACTIVE" : "ARGON_NOT_INSTALLED";
         public Camera PresentationCamera => _presentationCamera;
         public RenderTexture CompositeRenderTexture { get; private set; }
         public KeikoFPSArmRigController ArmRig { get; private set; }
@@ -134,6 +139,15 @@ namespace Rokas.BedSleep.V10Release
             _argonFullVisualActive = RokasArgonConnectedHandRuntime.TryInstall(
                 ArmRig, Watch, Oled, _presentationCamera, Sfx,
                 out _argonOledRenderer, out _argonOledCollider);
+            Debug.Log("[ROKAS HAND V14] Runtime Argon install=" +
+                _argonFullVisualActive + "; platform=" + Application.platform +
+                "; backend=" + SystemInfo.graphicsDeviceType +
+                "; prefab=" +
+                "BedSleep/ArgonFullHandWatch/PF_Argon_Keiko_Hand_Watch_Preview");
+            if (!_argonFullVisualActive)
+                Debug.LogError("[ROKAS HAND V14] Authentic hand did NOT activate. " +
+                    "Existing V10 hand is a fallback, not a V13 Build PASS. " +
+                    "See the preceding [ROKAS Bed Sleep] error in Player.log.");
             if (_argonFullVisualActive)
             {
                 _argonHand = GetComponentInChildren<RokasArgonFullHandFollower>(true);
