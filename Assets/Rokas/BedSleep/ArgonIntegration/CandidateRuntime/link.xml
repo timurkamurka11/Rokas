@@ -1,0 +1,8 @@
+<linker>
+  <!-- New-user GLB is activated by name across Unity asmdef boundaries. -->
+  <assembly fullname="Rokas.Argon.Candidate.Runtime">
+    <type fullname="Rokas.BedSleep.Argon.Candidate.RokasUserGLBReleaseConfig" preserve="all" />
+    <type fullname="Rokas.BedSleep.Argon.Candidate.RokasUserHandStudioProfile" preserve="all" />
+    <type fullname="Rokas.BedSleep.Argon.Candidate.RokasUserGLBRealBedFollower" preserve="all" />
+  </assembly>
+</linker>
