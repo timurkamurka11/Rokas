@@ -77,6 +77,14 @@ namespace Rokas.BedSleep.Argon.Editor
         {
             if (!EditorApplication.isPlaying || !EditorPrefs.GetBool(EnabledKey, true))
                 return;
+            // IMPORTANT: A staged release config now drives the SAME deferred
+            // runtime installer in Editor and Player. Do not instantiate a
+            // SECOND Editor-only copy or override the camera calibration.
+            // Keep legacy preview only for unstaged local experiments.
+            var shipped = Resources.Load<RokasUserGLBReleaseConfig>(
+                "BedSleep/NewUserGLB/ROKAS_NewHandReleaseConfig");
+            if (shipped != null && shipped.IsComplete)
+                return;
             GameObject game = GameObject.Find(ActorName);
             if (game == null) return; // real player has not clicked the bed yet
             int id = game.GetInstanceID();
