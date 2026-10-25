@@ -4,7 +4,6 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
-using Rokas.BedSleep.Argon.Candidate;
 
 namespace Rokas.BedSleep.Argon.Editor
 {
@@ -50,7 +49,11 @@ namespace Rokas.BedSleep.Argon.Editor
         {
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(Model);
             var albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(Albedo);
-            var profile = AssetDatabase.LoadAssetAtPath<RokasUserHandStudioProfile>(Profile);
+            var profile = AssetDatabase.LoadAssetAtPath<ScriptableObject>(Profile);
+            if (profile != null && profile.GetType().FullName !=
+                "Rokas.BedSleep.Argon.Candidate.RokasUserHandStudioProfile")
+                throw new BuildFailedException("[ROKAS NEW GLB RELEASE] Hand Studio " +
+                    "profile is the wrong script type: " + profile.GetType().FullName);
             if (model == null || albedo == null || profile == null)
                 throw new BuildFailedException(
                     "[ROKAS NEW GLB RELEASE] The current NEW hand is Editor-only " +
@@ -122,26 +125,51 @@ namespace Rokas.BedSleep.Argon.Editor
                 material.SetFloat("_Smoothness", .35f);
             EditorUtility.SetDirty(material);
 
-            var config =
-                AssetDatabase.LoadAssetAtPath<RokasUserGLBReleaseConfig>(ConfigPath);
+            // V15 used direct references across Unity assembly boundaries,
+            // causing CS0234 in Assembly-CSharp-Editor. Locate the imported
+            // runtime types by name, preserving their private asset GUIDs.
+            const string releaseTypeName =
+                "Rokas.BedSleep.Argon.Candidate.RokasUserGLBReleaseConfig";
+            Type configType = TypeCache.GetTypesDerivedFrom<ScriptableObject>()
+                .FirstOrDefault(t => t.FullName == releaseTypeName);
+            if (configType == null)
+                throw new BuildFailedException(
+                    "[ROKAS NEW GLB RELEASE] Missing runtime ScriptableObject " +
+                    releaseTypeName + "; verify Rokas.Argon.Candidate.Runtime.");
+
+            ScriptableObject config =
+                AssetDatabase.LoadAssetAtPath<ScriptableObject>(ConfigPath);
+            if (config != null && config.GetType() != configType)
+                throw new BuildFailedException(
+                    "[ROKAS NEW GLB RELEASE] Existing release asset has a " +
+                    "different script. Preserving it: " + ConfigPath);
             if (config == null)
             {
-                config = ScriptableObject.CreateInstance<RokasUserGLBReleaseConfig>();
+                config = ScriptableObject.CreateInstance(configType);
                 AssetDatabase.CreateAsset(config, ConfigPath);
             }
-            config.handModel = model;
-            config.initialPoseClip = clip;
-            config.originalSkinMaterial = material;
-            config.studioProfile = profile;
+            SerializedObject serialized = new SerializedObject(config);
+            SetAssetReference(serialized, "handModel", model);
+            SetAssetReference(serialized, "initialPoseClip", clip);
+            SetAssetReference(serialized, "originalSkinMaterial", material);
+            SetAssetReference(serialized, "studioProfile", profile);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
-
-            // Validate the exact player-available load, not just the file path.
-            var staged = AssetDatabase.LoadAssetAtPath<RokasUserGLBReleaseConfig>(
-                ConfigPath);
-            if (staged == null || !staged.IsComplete)
+            var staged = AssetDatabase.LoadAssetAtPath<ScriptableObject>(ConfigPath);
+            if (staged == null || staged.GetType() != configType)
                 throw new BuildFailedException(
-                    "[ROKAS NEW GLB RELEASE] Serialization failed; do not build.");
+                    "[ROKAS NEW GLB RELEASE] Release asset was not saved.");
+            var check = new SerializedObject(staged);
+            foreach (string key in new[] {
+                "handModel", "initialPoseClip",
+                "originalSkinMaterial", "studioProfile" })
+            {
+                var prop = check.FindProperty(key);
+                if (prop == null || prop.objectReferenceValue == null)
+                    throw new BuildFailedException(
+                        "[ROKAS NEW GLB RELEASE] Serialized dependency missing: " + key);
+            }
 
             Debug.Log("[ROKAS NEW GLB RELEASE] Player Dependencies STAGED: " +
                 "realFBX=" + Model + " clip=" + clip.name +
@@ -150,6 +178,17 @@ namespace Rokas.BedSleep.Argon.Editor
                 " material=" + MaterialPath + " studio=" + Profile +
                 ". Build & Run now includes the actual user hand.");
         }
+        private static void SetAssetReference(SerializedObject serialized,
+            string key, UnityEngine.Object value)
+        {
+            SerializedProperty property = serialized.FindProperty(key);
+            if (property == null || property.propertyType !=
+                SerializedPropertyType.ObjectReference)
+                throw new BuildFailedException(
+                    "[ROKAS NEW GLB RELEASE] Missing object reference field " + key);
+            property.objectReferenceValue = value;
+        }
+
     }
 }
 #endif
