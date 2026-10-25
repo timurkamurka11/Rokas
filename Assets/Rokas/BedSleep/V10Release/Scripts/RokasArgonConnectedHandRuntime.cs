@@ -227,17 +227,11 @@ namespace Rokas.BedSleep.V10Release
                     renderer.enabled = false;
                 physicalOled = face;
                 physicalCollider = hit;
-#if !UNITY_EDITOR
-                // The approved NEW user GLB was previously attached only by
-                // an EditorApplication preview. Ship that exact hand + Hand
-                // Studio calibration in WindowsPlayer without AssetDatabase.
-                bool userHandReady =
-                    RokasUserGLBPlayerInstaller.TryInstall(instance, camera);
-                if (!userHandReady)
-                    Debug.LogError("[ROKAS NEW GLB PLAYER] New approved hand absent " +
-                        "in standalone: original Argon fallback is on-screen. " +
-                        "Check the build-time release config and Player.log.");
-#endif
+                // Editor and WindowsPlayer must share the SAME hand installer,
+                // model, animation, camera and Hand Studio profile. Never
+                // attach inside InitializeComposite before the first camera
+                // frame. Deferred installer validates before hiding V16.
+                RokasUserGLBPlayerInstaller.Schedule(instance, camera);
                 Debug.Log("[ROKAS Bed Sleep] FULL Argon hand, sleeve, titanium watch, " +
                     "strap and Russian OLED ACTIVE in ordinary game. Left-entry POV.");
                 return true;
