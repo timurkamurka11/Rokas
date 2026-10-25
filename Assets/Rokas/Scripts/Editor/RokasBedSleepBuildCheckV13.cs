@@ -68,7 +68,14 @@ namespace Rokas.BedSleep.Argon.Editor
                     "[ROKAS V13] Build cannot include genuine 3D hand. Missing V10 composite Resources prefab: " +
                     CompositePath + ". The old fallback is NOT a valid production build.");
 
-            Debug.Log("[ROKAS V13] Build hand dependency check PASS: " +
+            // V13 proved only the OLD V16 Argon prefab exists. The new
+            // user-customized Hand Studio skin was attached by an Editor-only
+            // callback and never included in the player. Stage exact local
+            // FBX/clip/texture/profile references before accepting the build.
+            RokasUserGLBReleaseStager.EnsureReady();
+
+            Debug.Log("[ROKAS V15] Build hand dependency PASS: Argon driver + " +
+                "actual approved user-GLB model and calibration staged. " +
                 AssetDatabase.GetAssetPath(prefab) + " + " + ArgonPath);
         }
 
