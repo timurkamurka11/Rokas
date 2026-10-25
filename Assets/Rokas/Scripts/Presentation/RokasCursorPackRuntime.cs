@@ -278,7 +278,8 @@ namespace Rokas.Presentation
             bool show = owner == this && packReady && hasFocus &&
                 softwareCursorImage != null && current >= HandCursor.Point &&
                 IsGamePointerArea();
-            if (softwareCursorImage != null)
+            if (softwareCursorImage != null &&
+                softwareCursorImage.enabled != show)
                 softwareCursorImage.enabled = show;
             if (!show)
             {
@@ -294,7 +295,10 @@ namespace Rokas.Presentation
             Vector2 size = softwareCursorRect.sizeDelta;
             float x = p.x - hot.x * size.x / 176f;
             float y = p.y - (size.y - hot.y * size.y / 176f);
-            softwareCursorRect.anchoredPosition = new Vector2(x, y);
+            Vector2 screenPixelPosition = new Vector2(x, y);
+            if ((softwareCursorRect.anchoredPosition - screenPixelPosition)
+                .sqrMagnitude > .0001f)
+                softwareCursorRect.anchoredPosition = screenPixelPosition;
             SetNativeVisibility(false);
         }
 
