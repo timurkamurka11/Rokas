@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
-using Rokas.BedSleep.Argon.Candidate;
 
 namespace Rokas.BedSleep.V10Release
 {
@@ -18,8 +18,26 @@ namespace Rokas.BedSleep.V10Release
 
         internal static bool TryInstall(GameObject actor, Camera presentationCamera)
         {
-            var config = Resources.Load<RokasUserGLBReleaseConfig>(Resource);
-            if (config == null || !config.IsComplete)
+            // The Candidate runtime has its own Unity asmdef. Using a direct
+            // namespace reference here caused CS0234 in the default assembly.
+            // Serialized Resources references survive player builds; read
+            // their real objects without compiling across assemblies.
+            ScriptableObject config = Resources.Load<ScriptableObject>(Resource);
+            GameObject handModel = null;
+            AnimationClip initialPoseClip = null;
+            Material originalSkinMaterial = null;
+            ScriptableObject studioProfile = null;
+            if (config != null && config.GetType().FullName ==
+                "Rokas.BedSleep.Argon.Candidate.RokasUserGLBReleaseConfig")
+            {
+                Type type = config.GetType();
+                handModel = ReadField(type, config, "handModel") as GameObject;
+                initialPoseClip = ReadField(type, config, "initialPoseClip") as AnimationClip;
+                originalSkinMaterial = ReadField(type, config, "originalSkinMaterial") as Material;
+                studioProfile = ReadField(type, config, "studioProfile") as ScriptableObject;
+            }
+            if (handModel == null || initialPoseClip == null ||
+                originalSkinMaterial == null || studioProfile == null)
             {
                 Debug.LogError("[ROKAS NEW GLB PLAYER] Release configuration missing/incomplete: " +
                     Resource + ". Editor preview is NOT included in EXE. " +
@@ -67,7 +85,7 @@ namespace Rokas.BedSleep.V10Release
             try
             {
                 float started = Time.realtimeSinceStartup;
-                instance = UnityEngine.Object.Instantiate(config.handModel, actor.transform);
+                instance = UnityEngine.Object.Instantiate(handModel, actor.transform);
                 instance.name = "ROKAS_NEW_USER_GLB_RealBed_Player";
                 var skin = instance.GetComponentsInChildren<SkinnedMeshRenderer>(true)
                     .FirstOrDefault(x => x.sharedMesh != null &&
@@ -94,7 +112,7 @@ namespace Rokas.BedSleep.V10Release
                 if (scale < .04f || scale > 3f)
                     throw new InvalidOperationException("Unsafe new hand calibration: " + scale);
 
-                material = new Material(config.originalSkinMaterial);
+                material = new Material(originalSkinMaterial);
                 material.name = "ROKAS_NEW_GLB_Approved_Player_Material";
                 foreach (var anim in instance.GetComponentsInChildren<Animator>(true))
                     anim.enabled = false;
@@ -111,17 +129,29 @@ namespace Rokas.BedSleep.V10Release
                     x.name == "ROKAS_Subtle_DorsalHandVeins").ToArray();
                 var originalVisibility = oldVisuals.Select(x => x.enabled).ToArray();
 
-                var follower = instance.AddComponent<RokasUserGLBRealBedFollower>();
-                follower.Initialize(instance.transform, wrist, oldWrist,
-                    oldTip, oldIndex, oldLittle, config.initialPoseClip,
-                    scale, oldVisuals, originalVisibility, skin, material,
-                    watchRoot, oled, config.studioProfile, presentationCamera);
+                Type followerType = FindCandidateType(
+                    "Rokas.BedSleep.Argon.Candidate.RokasUserGLBRealBedFollower");
+                if (followerType == null ||
+                    !typeof(MonoBehaviour).IsAssignableFrom(followerType))
+                    throw new TypeLoadException(
+                        "New user GLB follower is missing from the player assembly.");
+                Component follower = instance.AddComponent(followerType);
+                MethodInfo initializer = followerType.GetMethod("Initialize",
+                    BindingFlags.Public | BindingFlags.Instance);
+                if (initializer == null)
+                    throw new MissingMethodException(followerType.FullName, "Initialize");
+                initializer.Invoke(follower, new object[] {
+                    instance.transform, wrist, oldWrist, oldTip,
+                    oldIndex, oldLittle, initialPoseClip,
+                    scale, oldVisuals, originalVisibility, skin,
+                    material, watchRoot, oled, studioProfile, presentationCamera
+                });
                 material = null; // Follower owns its instance material.
                 Debug.Log("[ROKAS NEW GLB PLAYER] ACTIVE in " +
                     Application.platform + ": native user hand vertices=" +
                     skin.sharedMesh.vertexCount + ", clip=" +
-                    config.initialPoseClip.name + ", Hand Studio=" +
-                    config.studioProfile.name + ", setup=" +
+                    initialPoseClip.name + ", Hand Studio=" +
+                    studioProfile.name + ", setup=" +
                     ((Time.realtimeSinceStartup - started) * 1000f).ToString("0.0") +
                     "ms. Old Argon skin hidden; original watch/OLED retained.");
                 return true;
@@ -134,6 +164,22 @@ namespace Rokas.BedSleep.V10Release
                     "original Argon remains usable: " + ex);
                 return false;
             }
+        }
+        private static object ReadField(Type type, object owner, string field)
+        {
+            FieldInfo info = type.GetField(field, BindingFlags.Public |
+                BindingFlags.Instance);
+            return info == null ? null : info.GetValue(owner);
+        }
+
+        private static Type FindCandidateType(string fullName)
+        {
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                Type found = assembly.GetType(fullName, false);
+                if (found != null) return found;
+            }
+            return null;
         }
     }
 }
