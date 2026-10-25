@@ -37,6 +37,29 @@ namespace Rokas.BedSleep.V10Release
                     "before user-hand calibration.");
                 return;
             }
+            // Record a comparable one-shot pose snapshot in both targets.
+            Transform wrist = null;
+            foreach (var bone in actor.GetComponentsInChildren<Transform>(true))
+            {
+                if (bone.name == "Arm_Wrist") { wrist = bone; break; }
+            }
+            ScriptableObject config = Resources.Load<ScriptableObject>(
+                "BedSleep/NewUserGLB/ROKAS_NewHandReleaseConfig");
+            var configField = config == null ? null :
+                config.GetType().GetField("studioProfile");
+            ScriptableObject profile = configField == null ? null :
+                configField.GetValue(config) as ScriptableObject;
+            var offsetField = profile == null ? null :
+                profile.GetType().GetField("handCameraOffset");
+            object studioOffset = offsetField == null ? "missing" :
+                offsetField.GetValue(profile);
+            Debug.Log("[ROKAS NEW GLB PARITY] PREPOSE platform=" +
+                Application.platform + " camera=" + cameraForHand.name +
+                " position=" + cameraForHand.transform.position.ToString("F3") +
+                " rotation=" + cameraForHand.transform.rotation.eulerAngles.ToString("F2") +
+                " wristViewport=" + (wrist == null ? "missing" :
+                    cameraForHand.WorldToViewportPoint(wrist.position).ToString("F3")) +
+                " studioOffset=" + studioOffset + " frame=" + Time.frameCount);
             float start = Time.realtimeSinceStartup;
             bool installed = RokasUserGLBPlayerInstaller.TryInstall(
                 actor, cameraForHand);
