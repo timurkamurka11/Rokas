@@ -8,7 +8,8 @@ using UnityEngine.UI;
 namespace Rokas.Presentation
 {
     /// <summary>
-    /// Keiko's six authentic user-authored hand cursor images.
+    /// Keiko's six authentic hand cursors with proven IMGUI rendering and a
+    /// visible native arrow fallback. The cursor artwork is always 176px.
     /// The pack is presentation-only: never clicks, drags or changes gameplay.
     /// Uses original Unity EventSystem raycasts to respect overlays and buttons.
     /// </summary>
@@ -54,17 +55,14 @@ namespace Rokas.Presentation
         private GameObject dragTarget;
         private Vector2 pointerDownAt;
         private bool hasFocus = true;
-        private GameObject cursorCanvas;
-        private Canvas cursorOverlayCanvas;
-        private RectTransform softwareCursorRect;
-        private RawImage softwareCursorImage;
-        private bool overlayAllowed;
-        private bool nativeShown = true;
+        private bool guiCursorAllowed;
+        private int lastGuiDrawnFrame = -10000;
+        private bool hardwareShown = true;
 
         private void Awake()
         {
-            // A previously installed Bootstrap hook may coexist with the
-            // self-registering cursor pack. Keep ONE cursor owner only.
+            // Keep one owner per loaded scene. OnDisable releases ownership
+            // so a new scene does not inherit a dead/stale cursor controller.
             if (owner != null && owner != this)
             {
                 enabled = false;
@@ -85,10 +83,11 @@ namespace Rokas.Presentation
             packReady = foundAll;
             if (packReady)
             {
-                InitializeSoftwareCursor();
                 Apply(HandCursor.Point);
-                Debug.Log("[ROKAS CURSOR V16] Single 176px Keiko UI pointer ready; " +
-                    "no OnGUI, no hardware double cursor.");
+                Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+                Cursor.visible = true;
+                Debug.Log("[ROKAS CURSOR V16.2] 176px IMGUI Keiko hand ready; " +
+                    "the Windows arrow remains a guaranteed fallback.");
             }
             else
             {
@@ -120,45 +119,35 @@ namespace Rokas.Presentation
             return null;
         }
 
-        private void InitializeSoftwareCursor()
+        private void SetNativeVisible(bool visible)
         {
-            // Render ONE pointer at full 176x176 resolution in the Game view.
-            // No IMGUI painting and no small Windows hand at the same time.
-            cursorCanvas = new GameObject("ROKAS_Keiko_Cursor_V16_OneCanvas",
-                typeof(RectTransform), typeof(Canvas));
-            // V16's child ScreenSpaceOverlay Canvas could fail to render.
-            // Keep the Keiko 176px cursor on a real root Canvas.
-            cursorOverlayCanvas = cursorCanvas.GetComponent<Canvas>();
-            cursorOverlayCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            cursorOverlayCanvas.overrideSorting = true;
-            cursorOverlayCanvas.sortingOrder = 32760;
-
-            GameObject display = new GameObject("Keiko_Pointer_176_NoRaycast",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
-            display.transform.SetParent(cursorCanvas.transform, false);
-            softwareCursorRect = display.GetComponent<RectTransform>();
-            softwareCursorRect.anchorMin = Vector2.zero;
-            softwareCursorRect.anchorMax = Vector2.zero;
-            softwareCursorRect.pivot = Vector2.zero;
-            softwareCursorRect.sizeDelta = new Vector2(176f, 176f);
-            softwareCursorImage = display.GetComponent<RawImage>();
-            softwareCursorImage.raycastTarget = false;
-            softwareCursorImage.maskable = false;
-            softwareCursorImage.enabled = false;
-
-            // Restore native ARROW outside the game; hide it ONLY when
-            // the in-game software hand is actually displayed.
-            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-            nativeShown = Cursor.visible;
+            // Only change the OS cursor when the state actually changes.
+            if (hardwareShown != visible || Cursor.visible != visible)
+            {
+                Cursor.visible = visible;
+                hardwareShown = visible;
+            }
         }
 
         private void Update()
         {
-            if (!packReady || !hasFocus) return;
-            // Input/raycast only; final pointer coordinates are updated in
-            // LateUpdate after scene UI/camera logic, immediately pre-render.
-            overlayAllowed = IsGamePointerArea();
-            if (!overlayAllowed) return;
+            if (!packReady || !hasFocus)
+            {
+                SetNativeVisible(true);
+                return;
+            }
+            guiCursorAllowed = true;
+#if UNITY_EDITOR
+            var over = UnityEditor.EditorWindow.mouseOverWindow;
+            if (over != null && over.GetType().Name != "GameView")
+                guiCursorAllowed = false;
+#endif
+            // Never hide Windows until a real IMGUI repaint succeeded.
+            // If the Game view stops repainting or focus is lost, return
+            // immediately to a visible native pointer (no invisible cursor).
+            bool painted = lastGuiDrawnFrame >= Time.frameCount - 2;
+            SetNativeVisible(!(guiCursorAllowed && painted));
+            if (!guiCursorAllowed) return;
             if (EventSystem.current == null)
             {
                 Apply(HandCursor.Point);
@@ -241,134 +230,65 @@ namespace Rokas.Presentation
         private void Apply(HandCursor state)
         {
             if (!packReady || state == current) return;
-            int i = (int)state;
-            if (i < 0 || i >= textures.Length || textures[i] == null) return;
+            int index = (int)state;
+            if (index < 0 || index >= textures.Length || textures[index] == null)
+                return;
             current = state;
-            if (softwareCursorImage != null)
-                softwareCursorImage.texture = textures[i];
-            // Do not call Cursor.SetCursor here: Windows can downscale
-            // hardware PNGs and briefly display a second small Keiko hand.
+            // Rendering stays exclusively in the proven 176px OnGUI path.
+            // No second, smaller hardware Keiko cursor is created.
         }
 
-        private bool IsGamePointerArea()
+        private void OnGUI()
         {
-            Vector3 p = Input.mousePosition;
-            if (p.x < 0f || p.y < 0f ||
-                p.x >= Screen.width || p.y >= Screen.height)
-                return false;
-#if UNITY_EDITOR
-            // Unity Editor can continue to receive ticks while pointer is
-            // over Profiler/Hierarchy. Show the OS arrow there instead.
-            var over = UnityEditor.EditorWindow.mouseOverWindow;
-            if (over != null && over.GetType().Name != "GameView")
-                return false;
-#endif
-            return true;
-        }
-
-        private void SetNativeVisibility(bool visible)
-        {
-            if (nativeShown != visible || Cursor.visible != visible)
-            {
-                Cursor.visible = visible;
-                nativeShown = visible;
-            }
-        }
-
-        private void LateUpdate()
-        {
-            // Never hide Windows if the dedicated cursor Canvas cannot
-            // render, or the image lacks an original Keiko texture.
-            bool rootReady = cursorOverlayCanvas != null &&
-                cursorOverlayCanvas.isActiveAndEnabled &&
-                cursorOverlayCanvas.rootCanvas == cursorOverlayCanvas &&
-                cursorCanvas != null && cursorCanvas.activeInHierarchy;
-            bool show = owner == this && packReady && hasFocus &&
-                rootReady && softwareCursorImage != null &&
-                softwareCursorImage.texture != null &&
-                current >= HandCursor.Point && IsGamePointerArea();
-            if (softwareCursorImage != null &&
-                softwareCursorImage.enabled != show)
-                softwareCursorImage.enabled = show;
-            if (!show)
-            {
-                SetNativeVisibility(true);
-                return;
-            }
-
-            // No artificial lerp or smoothing: direct fresh pointer position
-            // avoids delay and visible drifting on slower rendering frames.
-            Vector3 p = Input.mousePosition;
+            if (!packReady || !hasFocus || !guiCursorAllowed ||
+                Event.current == null || Event.current.type != EventType.Repaint) return;
             int i = (int)current;
-            Vector2 hot = Hotspots[i];
-            Vector2 size = softwareCursorRect.sizeDelta;
-            float x = p.x - hot.x * size.x / 176f;
-            float y = p.y - (size.y - hot.y * size.y / 176f);
-            Vector2 screenPixelPosition = new Vector2(x, y);
-            if ((softwareCursorRect.anchoredPosition - screenPixelPosition)
-                .sqrMagnitude > .0001f)
-                softwareCursorRect.anchoredPosition = screenPixelPosition;
-            SetNativeVisibility(false);
-        }
-
-        private void OnEnable()
-        {
-            if (owner == null) owner = this;
-            else if (owner != this)
-            {
-                enabled = false;
+            if (i < 0 || i >= textures.Length || textures[i] == null) return;
+            var mouse = Input.mousePosition;
+            if (mouse.x < 0 || mouse.y < 0 ||
+                mouse.x > Screen.width || mouse.y > Screen.height) {
+                lastGuiDrawnFrame = -10000;
+                SetNativeVisible(true);
                 return;
             }
-            if (packReady)
-            {
-                if (cursorCanvas == null) InitializeSoftwareCursor();
-                Apply(HandCursor.Point);
-            }
+            GUI.depth = -10000;
+            GUI.color = Color.white;
+            const float cursorSize = 176f;
+            GUI.DrawTexture(new Rect(mouse.x-Hotspots[i].x,
+                Screen.height-mouse.y-Hotspots[i].y,
+                cursorSize, cursorSize), textures[i], ScaleMode.ScaleToFit, true);
+            lastGuiDrawnFrame = Time.frameCount;
+            SetNativeVisible(false);
         }
 
         private void OnApplicationFocus(bool focused)
         {
             if (owner != this) return;
             hasFocus = focused;
-            overlayAllowed = false;
-            if (softwareCursorImage != null)
-                softwareCursorImage.enabled = false;
-            SetNativeVisibility(true);
+            lastGuiDrawnFrame = -10000;
+            SetNativeVisible(true);
             if (!focused)
             {
-                dragging = false;
-                dragTarget = null;
-                current = (HandCursor)(-1);
                 Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+                Cursor.visible = true;
+                current = (HandCursor)(-1);
             }
-            else if (packReady)
-                Apply(HandCursor.Point);
         }
-
         private void OnDisable()
         {
             if (owner != this) return;
-            if (softwareCursorImage != null)
-                softwareCursorImage.enabled = false;
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-            SetNativeVisibility(true);
+            lastGuiDrawnFrame = -10000;
+            SetNativeVisible(true);
             current = (HandCursor)(-1);
-            owner = null;
+            if (owner == this) owner = null;
         }
-
         private void OnDestroy()
         {
-            // OnDisable can release ownership before OnDestroy. Still
-            // destroy this detached root Canvas on every code path.
-            if (cursorCanvas != null) Destroy(cursorCanvas);
-            cursorCanvas = null;
-            cursorOverlayCanvas = null;
-            softwareCursorImage = null;
-            softwareCursorRect = null;
             if (owner != this) return;
             owner = null;
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-            SetNativeVisibility(true);
+            SetNativeVisible(true);
         }
     }
 }
