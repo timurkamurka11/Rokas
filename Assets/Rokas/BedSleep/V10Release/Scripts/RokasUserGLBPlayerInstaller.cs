@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
@@ -15,6 +16,17 @@ namespace Rokas.BedSleep.V10Release
     {
         private const string Resource =
             "BedSleep/NewUserGLB/ROKAS_NewHandReleaseConfig";
+
+        // The V15 player installed immediately while Argon and its camera
+        // were still initializing; the Editor attached on a later update.
+        // Both environments now use this same deferred, staged installer.
+        internal static void Schedule(GameObject actor, Camera presentationCamera)
+        {
+            if (actor == null || presentationCamera == null) return;
+            if (actor.GetComponent<RokasUserGLBDeferredInstall>() != null) return;
+            var installer = actor.AddComponent<RokasUserGLBDeferredInstall>();
+            installer.Configure(actor, presentationCamera);
+        }
 
         internal static bool TryInstall(GameObject actor, Camera presentationCamera)
         {
@@ -148,7 +160,15 @@ namespace Rokas.BedSleep.V10Release
                 });
                 material = null; // Follower owns its instance material.
                 Debug.Log("[ROKAS NEW GLB PLAYER] ACTIVE in " +
-                    Application.platform + ": native user hand vertices=" +
+                    Application.platform + ": view=" +
+                    presentationCamera.name + " res=" +
+                    presentationCamera.pixelWidth + "x" + presentationCamera.pixelHeight +
+                    " originViewport=" + presentationCamera.WorldToViewportPoint(
+                        oldWrist.position).ToString("F3") +
+                    " studioOffset=" + ReadVector(studioProfile, "handCameraOffset") +
+                    " studioRotation=" + ReadVector(studioProfile, "handEuler") +
+                    " scale=" + scale.ToString("F4") +
+                    " native user hand vertices=" +
                     skin.sharedMesh.vertexCount + ", clip=" +
                     initialPoseClip.name + ", Hand Studio=" +
                     studioProfile.name + ", setup=" +
@@ -180,6 +200,63 @@ namespace Rokas.BedSleep.V10Release
                 if (found != null) return found;
             }
             return null;
+        }
+        private static Vector3 ReadVector(ScriptableObject profile, string field)
+        {
+            if (profile == null) return Vector3.zero;
+            FieldInfo info = profile.GetType().GetField(field,
+                BindingFlags.Public | BindingFlags.Instance);
+            return info == null ? Vector3.zero : (Vector3)info.GetValue(profile);
+        }
+
+    }
+
+    /// <summary>
+    /// Wait for the V10/Argon rig, camera and wrist transforms to finish
+    /// their initial frame before calibrating the new hand. The Editor and
+    /// player now run the SAME code path. Never hide the old model before
+    /// the replacement validates. No busy-loop or per-frame allocations.
+    /// </summary>
+    internal sealed class RokasUserGLBDeferredInstall : MonoBehaviour
+    {
+        private GameObject actor;
+        private Camera cameraForHand;
+        private bool scheduled;
+
+        internal void Configure(GameObject target, Camera camera)
+        {
+            if (scheduled) return;
+            scheduled = true;
+            actor = target;
+            cameraForHand = camera;
+            StartCoroutine(RunOnceAfterSceneSettles());
+        }
+
+        private IEnumerator RunOnceAfterSceneSettles()
+        {
+            // Editor's old EditorApplication callback attached AFTER frame
+            // initialization. V15 player attached INSIDE InitializeComposite.
+            yield return null;
+            yield return new WaitForEndOfFrame();
+            if (actor == null || cameraForHand == null)
+            {
+                Debug.LogError("[ROKAS NEW GLB PARITY] Camera/actor destroyed " +
+                    "before unified new-hand install.");
+                yield break;
+            }
+            float start = Time.realtimeSinceStartup;
+            bool installed = RokasUserGLBPlayerInstaller.TryInstall(
+                actor, cameraForHand);
+            Debug.Log("[ROKAS NEW GLB PARITY] Same runtime installer in " +
+                Application.platform + " => " + (installed ? "ACTIVE" : "FAILED") +
+                ", setup=" + ((Time.realtimeSinceStartup - start)*1000f)
+                    .ToString("F1") + "ms, camera=" + cameraForHand.name +
+                ", aspect=" + cameraForHand.aspect.ToString("F4") +
+                ", screen=" + Screen.width + "x" + Screen.height);
+            if (!installed)
+                Debug.LogError("[ROKAS NEW GLB PARITY] Old Argon remains " +
+                    "visible. Check the preceding runtime reason; never " +
+                    "treat a prefab Build PASS as a visual success.");
         }
     }
 }
