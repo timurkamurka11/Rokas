@@ -55,6 +55,7 @@ namespace Rokas.Presentation
         private Vector2 pointerDownAt;
         private bool hasFocus = true;
         private GameObject cursorCanvas;
+        private Canvas cursorOverlayCanvas;
         private RectTransform softwareCursorRect;
         private RawImage softwareCursorImage;
         private bool overlayAllowed;
@@ -125,11 +126,12 @@ namespace Rokas.Presentation
             // No IMGUI painting and no small Windows hand at the same time.
             cursorCanvas = new GameObject("ROKAS_Keiko_Cursor_V16_OneCanvas",
                 typeof(RectTransform), typeof(Canvas));
-            cursorCanvas.transform.SetParent(transform, false);
-            Canvas canvas = cursorCanvas.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.overrideSorting = true;
-            canvas.sortingOrder = 32760;
+            // V16's child ScreenSpaceOverlay Canvas could fail to render.
+            // Keep the Keiko 176px cursor on a real root Canvas.
+            cursorOverlayCanvas = cursorCanvas.GetComponent<Canvas>();
+            cursorOverlayCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            cursorOverlayCanvas.overrideSorting = true;
+            cursorOverlayCanvas.sortingOrder = 32760;
 
             GameObject display = new GameObject("Keiko_Pointer_176_NoRaycast",
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
@@ -275,9 +277,16 @@ namespace Rokas.Presentation
 
         private void LateUpdate()
         {
+            // Never hide Windows if the dedicated cursor Canvas cannot
+            // render, or the image lacks an original Keiko texture.
+            bool rootReady = cursorOverlayCanvas != null &&
+                cursorOverlayCanvas.isActiveAndEnabled &&
+                cursorOverlayCanvas.rootCanvas == cursorOverlayCanvas &&
+                cursorCanvas != null && cursorCanvas.activeInHierarchy;
             bool show = owner == this && packReady && hasFocus &&
-                softwareCursorImage != null && current >= HandCursor.Point &&
-                IsGamePointerArea();
+                rootReady && softwareCursorImage != null &&
+                softwareCursorImage.texture != null &&
+                current >= HandCursor.Point && IsGamePointerArea();
             if (softwareCursorImage != null &&
                 softwareCursorImage.enabled != show)
                 softwareCursorImage.enabled = show;
@@ -300,6 +309,21 @@ namespace Rokas.Presentation
                 .sqrMagnitude > .0001f)
                 softwareCursorRect.anchoredPosition = screenPixelPosition;
             SetNativeVisibility(false);
+        }
+
+        private void OnEnable()
+        {
+            if (owner == null) owner = this;
+            else if (owner != this)
+            {
+                enabled = false;
+                return;
+            }
+            if (packReady)
+            {
+                if (cursorCanvas == null) InitializeSoftwareCursor();
+                Apply(HandCursor.Point);
+            }
         }
 
         private void OnApplicationFocus(bool focused)
@@ -329,15 +353,22 @@ namespace Rokas.Presentation
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
             SetNativeVisibility(true);
             current = (HandCursor)(-1);
+            owner = null;
         }
 
         private void OnDestroy()
         {
+            // OnDisable can release ownership before OnDestroy. Still
+            // destroy this detached root Canvas on every code path.
+            if (cursorCanvas != null) Destroy(cursorCanvas);
+            cursorCanvas = null;
+            cursorOverlayCanvas = null;
+            softwareCursorImage = null;
+            softwareCursorRect = null;
             if (owner != this) return;
             owner = null;
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
             SetNativeVisibility(true);
-            if (cursorCanvas != null) Destroy(cursorCanvas);
         }
     }
 }
