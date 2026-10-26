@@ -71,19 +71,12 @@ namespace Rokas.Presentation
             bootstrap = FindFirstObjectByType<RokasBootstrap>();
             if (bootstrap == null || bootstrap.View == null ||
                 bootstrap.Session == null) return;
-            var all = FindObjectsByType<RectTransform>(FindObjectsInactive.Exclude,
-                FindObjectsSortMode.None);
-            RectTransform stage = null;
-            RectTransform panels = null;
-            for (int i = 0; i < all.Length; i++)
-            {
-                RectTransform r = all[i];
-                if (r.name != "AuthoredStage" || !r.IsChildOf(bootstrap.transform))
-                    continue;
-                stage = r;
-                panels = stage.Find("Panels") as RectTransform;
-                break;
-            }
+            // Avoid a costly global hierarchy scan on every polling attempt.
+            // Both names come from the existing RokasView constructor.
+            RectTransform stage = bootstrap.transform.Find(
+                "RokasCanvas/AuthoredStage") as RectTransform;
+            RectTransform panels = stage != null
+                ? stage.Find("Panels") as RectTransform : null;
             if (stage == null || panels == null) return;
 
             // If a local or GitHub-integrated journal already exists, do not
