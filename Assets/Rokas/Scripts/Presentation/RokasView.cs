@@ -48,6 +48,7 @@ namespace Rokas.Presentation
         private readonly LaptopView laptop;
         private readonly MessagesNotificationView messageNotifications;
         private readonly HubDialogueController hubDialogue;
+        private readonly RokasQuestJournalHud journal;
         private readonly LaptopCinematicSequence laptopCinematic;
         private readonly RokasBedSleepCinematic bedSleep;
         private RunPhase phase;
@@ -70,6 +71,7 @@ namespace Rokas.Presentation
             get
             {
                 return transition || storageBlocked || panel == "settings" ||
+                    (journal != null && journal.IsOpen) ||
                     (hubDialogue != null && hubDialogue.IsOpen);
             }
         }
@@ -176,6 +178,7 @@ namespace Rokas.Presentation
                 audio,
                 SetSceneInteractionsEnabled,
                 OpenHubMenu);
+            journal = new RokasQuestJournalHud(ui, stage, panels, audio.Click);
             home = new HomeView(
                 ui, assets, session, audio,
                 OpenFromHomeLaptopHotspot, Act, Travel, ToastShort, OpenHubDialogue,
@@ -215,7 +218,7 @@ namespace Rokas.Presentation
                 () => session.HallwayLightOn);
             bedSleep = new RokasBedSleepCinematic(
                 owner, ui, transitions, assets.home, session, save,
-                OnBedSleepFinished, UpdateHomeCameraBlend);
+                OnBedSleepFinished, UpdateHomeCameraBlend, audio);
             messageNotifications = new MessagesNotificationView(ui, stage, session);
             observedMessageSequence = HighestMessageSequence();
             LastMessageAudioCue = string.Empty;
@@ -754,6 +757,11 @@ namespace Rokas.Presentation
                 return;
             }
             if (transition || storageBlocked) return;
+            if (journal != null && journal.IsOpen)
+            {
+                journal.Close();
+                return;
+            }
             if (hubDialogue != null && hubDialogue.IsOpen)
             {
                 audio.Click();
@@ -766,7 +774,8 @@ namespace Rokas.Presentation
 
         public void FocusNext()
         {
-            if (transition || storageBlocked || !EventSystem.current) return;
+            if (transition || storageBlocked || (journal != null && journal.IsOpen) ||
+                !EventSystem.current) return;
             if (hubDialogue != null && hubDialogue.IsOpen)
             {
                 hubDialogue.FocusNextControl();
@@ -830,6 +839,13 @@ namespace Rokas.Presentation
                 }
             }
             hubDialogue?.Tick(dt);
+            journal?.Tick(dt,
+                IsHomeLocation(phase) && homeSubLocation == HomeLocation.MainRoom &&
+                session.State.hubGuildIntroSeen && !storageBlocked && !transition &&
+                string.IsNullOrEmpty(panel) &&
+                (hubDialogue == null || !hubDialogue.IsOpen) &&
+                (laptopCinematic == null || !laptopCinematic.IsPlaying) &&
+                (bedSleep == null || !bedSleep.Active));
             if (panel == "laptop")
             {
                 if (Time.frameCount != laptopOpenedFrame && Input.GetMouseButtonDown(0))
@@ -919,6 +935,7 @@ namespace Rokas.Presentation
             mission.ClearReferences();
             effects.Dispose();
             hubDialogue?.Dispose();
+            journal?.Dispose();
             messageNotifications.Dispose();
             session.Messages.Changed -= HandleMessageRoutingChanged;
             session.LiveMessages.Signal -= HandleLiveMessengerSignal;

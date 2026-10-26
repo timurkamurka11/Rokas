@@ -1,0 +1,49 @@
+name: ROKAS Argon - Authentic 25 Bone Finger Retopology
+on:
+  push:
+    branches: [codex/bedsleep-argon-import-candidate]
+    paths: ['Assets/Rokas/BedSleep/ArgonIntegration/REQUEST_TRUE_RETOPO_QA.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reconstruct-original-finger-topology:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify genuine source FBX and candidate-only Python implementation
+        run: |
+          set -euo pipefail
+          test -s Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx
+          test -s Tools/ROKAS/ArgonFingerRetopo/retopo_candidate.py
+          python3 -m py_compile Tools/ROKAS/ArgonFingerRetopo/retopo_candidate.py
+      - name: Install Blender for original 3D rig reconstruction
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+          blender --version | head -2
+          blender -b --factory-startup --python-expr "import numpy; print('ROKAS Blender numpy ready:', numpy.__version__)"
+      - name: Attempt true continuous skin retopology from original rig
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p Artifacts/ArgonTrueRetopo
+          blender -b --factory-startup -t 4 \
+            -P Tools/ROKAS/ArgonFingerRetopo/retopo_candidate.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonTrueRetopo \
+            2>&1 | tee Artifacts/ArgonTrueRetopo/blender_remesh_log.txt
+          test -s Artifacts/ArgonTrueRetopo/geometry_before_after.json
+          test -s Artifacts/ArgonTrueRetopo/ROKAS_Argon_TrueRetopo_BoneRig_QA_ONLY.fbx
+      - name: Upload source-grounded topology validation, keep experimental FBX private
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-Argon-TrueFingerRetopo-Experiment-PrivateQA
+          path: |
+            Artifacts/ArgonTrueRetopo/geometry_before_after.json
+            Artifacts/ArgonTrueRetopo/blender_remesh_log.txt
+            Artifacts/ArgonTrueRetopo/ROKAS_Argon_TrueRetopo_BoneRig_QA_ONLY.fbx
+          retention-days: 7
+          if-no-files-found: warn

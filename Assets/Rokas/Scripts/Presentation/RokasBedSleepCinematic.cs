@@ -36,18 +36,45 @@ namespace Rokas.Presentation
         private readonly GameSession session;
         private readonly Action save;
         private readonly Action onFinished;
+        private readonly RokasAudio backgroundAudio;
         private readonly Action<float> moveHomeCamera;
         private readonly Texture originalRoom;
         private RectTransform root;
         private RawImage lyingPov, armPov, blurredPov, real3DArmPov;
         private RokasBedSleepProductionRigBridge productionRig;
-        private Image curtain, topEyelid, bottomEyelid;
+        private Image curtain, entryCurtain;
+        private RokasKeikoDreamLoop keikoDream;
+        private RokasSleepEyeAperture eyeAperture;
+        private AudioSource keikoDreamAudio;
+        private AudioClip keikoDreamClip;
+        private RenderTexture runtimeBlur;
+        private bool wakingReveal;
+        private bool warnedMissingVisionMask;
+        private bool warnedHiddenVisionMask;
+        private float lastEyeClosure;
         private CanvasGroup alarmControls, watchControls;
         private Text currentClock, selectedDuration, wakeClock, alarmHint;
-        private Button alarmButton, confirmButton;
+        private Button alarmButton, confirmButton, focusButton, exitBedButton;
+        private RokasBedWatchPngTabs pngTabs;
+        private bool watchFocus;
+        private bool hasExplicitWatchTab;
+        private int lastSystemMinute=-1;
+        private float focusBlend;
+        // A zoom anchored to moving skinned-mesh bounds amplified tiny idle
+        // motion into a full-frame jump after each crown step.
+        private bool focusAnchorCaptured;
+        private Vector2 focusAnchorViewport;
         private RectTransform watchHitRect;
         private AudioSource audio;
         private AudioClip tickClip;
+        private AudioClip recordedWheelClip;
+        private AudioClip sitOnBedClip, settlingToSleepClip, recordedWakeClip;
+        // Black-screen time is cinematic time only. The approved save logic
+        // still advances the chosen 1-12 in-game hours once, not in real time.
+        // User-approved dream is ONE short 7s sequence, not 3 repeated
+        // cycles (old V4 kept the source 7.2s loop running for ~22 seconds).
+        private const float RestingInDarkSeconds = 3.80f;
+        private float lastRecordedWheelTime = -10f;
         private Coroutine sequence;
         private State state = State.Idle;
         private float selectedHours = 7f, startHours;
@@ -64,7 +91,7 @@ namespace Rokas.Presentation
         public RokasBedSleepCinematic(MonoBehaviour runner, UiKit ui,
             Transform layer, Texture originalRoom,
             GameSession session, Action save, Action onFinished,
-            Action<float> moveHomeCamera)
+            Action<float> moveHomeCamera, RokasAudio backgroundAudio)
         {
             this.runner = runner;
             this.ui = ui;
@@ -74,6 +101,7 @@ namespace Rokas.Presentation
             this.save = save;
             this.onFinished = onFinished;
             this.moveHomeCamera = moveHomeCamera;
+            this.backgroundAudio = backgroundAudio;
         }
 
         public static float QuantizeDuration(float hours)
@@ -106,18 +134,36 @@ namespace Rokas.Presentation
             state = State.BedHotspotPressed;
             cancelRequested = committed = false;
             selectedHours = 7f;
-            startHours = session.State.hubSleepInitialized
-                ? Mathf.Repeat(session.State.hubClockHours, 24f) : 23.5f;
+            // The smartwatch displays the actual LOCAL computer clock.
+            // It is sampled once per minute while selecting sleep duration.
+            // Existing ROKAS save ownership and wake-day rollover are kept.
+            DateTime localNow=DateTime.Now;
+            startHours = localNow.Hour + localNow.Minute / 60f;
             startDay = session.State.hubSleepInitialized
                 ? Mathf.Max(1, session.State.hubDay) : 1;
             elapsedVisual = handOpacity = 0f;
-            BuildOverlay();
+            // Create ONLY a lightweight black curtain immediately at click.
+            // Heavy presentation/3D rig setup happens BEHIND it, not before
+            // the player sees the transition begin.
+            entryCurtain = ui.Box(layer,
+                "ROKAS_Instant_BedEntry_BlackCurtain", 0, 0,
+                1920, 1080, new Color(.008f,.013f,.021f,0f), false);
+            entryCurtain.transform.SetAsLastSibling();
+            // Do NOT lower music or rain when the player merely sits down.
+            // They remain audible during clock setup and start fading only
+            // after the player confirms the alarm and begins lying down.
+            backgroundAudio?.SetBedSleepMusicDucking(false);
+            // This replaces the generic hub button click: play exactly once
+            // after the bed-trigger state has been accepted.
             sequence = runner.StartCoroutine(Play());
         }
 
         public void Tick(float dt)
         {
             if (!Active) return;
+            // Amortize eye-mask generation: no huge initialization cost when
+            // the player clicks the bed. Keep one mask per frame at most.
+            eyeAperture?.WarmupOneFrame();
             elapsedVisual += Mathf.Max(0f, dt);
             // Very restrained breathing and cursor parallax in the authored
             // photographic plate; only a small movement, never a 3D camera.
@@ -148,9 +194,71 @@ namespace Rokas.Presentation
             }
 
             if (state != State.TimeSelection) return;
+            DateTime wallClock=DateTime.Now;
+            int wallMinute=wallClock.Hour*60+wallClock.Minute;
+            if(wallMinute!=lastSystemMinute)
+            {
+                lastSystemMinute=wallMinute;
+                startHours=wallMinute/60f;
+                productionRig?.SyncComputerClock(startHours,selectedHours);
+                RefreshWatch();
+            }
             // Unlike the 2D photographic fallback, the production hand
             // has a living idle and a physically animated crown.
             productionRig?.TickIdle(dt);
+            if (productionRig != null && productionRig.Ready &&
+                watchHitRect != null)
+            {
+                // Close look is a 2D crop of the ORIGINAL hand render texture:
+                // the 3D model, gameplay camera, lights and motion are untouched.
+                focusBlend = Mathf.MoveTowards(focusBlend,
+                    watchFocus ? 1f : 0f,
+                    Mathf.Max(0f, Time.unscaledDeltaTime) / .38f);
+                Rect hit = productionRig.GetProjectedWatchInputRect();
+                if (hit.width > 1f && hit.height > 1f)
+                {
+                    float zoom = Mathf.Lerp(1f, 2.12f,
+                        focusBlend * focusBlend * (3f - 2f * focusBlend));
+                    float size = 1f / zoom;
+                    float xCenter = (hit.x + hit.width * .5f) / 1920f;
+                    float yCenter = 1f -
+                        (hit.y + hit.height * .5f) / 1080f;
+                    // While focused, lock the crop to the first stable face
+                    // position. The old implementation chased the breathing
+                    // hand bounds every frame, causing the visible image to
+                    // vibrate whenever an OLED value or crown was changed.
+                    // The actual interactive hit target still uses live bounds.
+                    if (watchFocus && !focusAnchorCaptured)
+                    {
+                        focusAnchorViewport = new Vector2(xCenter,yCenter);
+                        focusAnchorCaptured = true;
+                    }
+                    if (focusAnchorCaptured)
+                    {
+                        xCenter = focusAnchorViewport.x;
+                        yCenter = focusAnchorViewport.y;
+                    }
+                    Rect uv = new Rect(
+                        Mathf.Clamp(xCenter - size * .5f, 0f, 1f - size),
+                        Mathf.Clamp(yCenter - size * .5f, 0f, 1f - size),
+                        size, size);
+                    if (real3DArmPov != null) real3DArmPov.uvRect = uv;
+                    // The click target follows the actual enlarged OLED,
+                    // so screen navigation remains accurate in focus mode.
+                    float x = (hit.x / 1920f - uv.x) / uv.width * 1920f;
+                    float y = (1f - (1f - hit.y / 1080f - uv.y) /
+                        uv.height) * 1080f;
+                    watchHitRect.anchoredPosition = new Vector2(x, -y);
+                    watchHitRect.sizeDelta = new Vector2(
+                        hit.width / uv.width, hit.height / uv.height);
+                }
+                // When the watch opens, the dial is visible but NO top tab
+                // is selected: all authored PNGs must remain amber until
+                // an explicit mouse/keyboard choice.
+                if (pngTabs != null && pngTabs.Available && hasExplicitWatchTab)
+                    pngTabs.SetSelected(productionRig.GetSelectedWatchTab(),
+                        false);
+            }
             float scroll = 0f;
 #if ENABLE_INPUT_SYSTEM
             if (Mouse.current != null)
@@ -163,6 +271,15 @@ namespace Rokas.Presentation
                     Keyboard.current.leftArrowKey.wasPressedThisFrame) Step(-1);
                 if (Keyboard.current.enterKey.wasPressedThisFrame ||
                     Keyboard.current.spaceKey.wasPressedThisFrame) Confirm();
+                if (Keyboard.current.tabKey.wasPressedThisFrame)
+                    CycleWatchTab();
+                if (Keyboard.current.digit1Key.wasPressedThisFrame) SelectWatchTab(0);
+                if (Keyboard.current.digit2Key.wasPressedThisFrame) SelectWatchTab(1);
+                if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectWatchTab(2);
+                if (Keyboard.current.digit4Key.wasPressedThisFrame) SelectWatchTab(3);
+                if (Keyboard.current.digit5Key.wasPressedThisFrame) SelectWatchTab(4);
+                if (Keyboard.current.eKey.wasPressedThisFrame) Confirm();
+                if (Keyboard.current.escapeKey.wasPressedThisFrame) { Cancel(); return; }
             }
 #elif ENABLE_LEGACY_INPUT_MANAGER
             scroll = Input.mouseScrollDelta.y;
@@ -172,6 +289,15 @@ namespace Rokas.Presentation
                 Input.GetKeyDown(KeyCode.LeftArrow)) Step(-1);
             if (Input.GetKeyDown(KeyCode.Return) ||
                 Input.GetKeyDown(KeyCode.Space)) Confirm();
+            if (Input.GetKeyDown(KeyCode.Tab))
+                CycleWatchTab();
+            if (Input.GetKeyDown(KeyCode.Alpha1)) SelectWatchTab(0);
+            if (Input.GetKeyDown(KeyCode.Alpha2)) SelectWatchTab(1);
+            if (Input.GetKeyDown(KeyCode.Alpha3)) SelectWatchTab(2);
+            if (Input.GetKeyDown(KeyCode.Alpha4)) SelectWatchTab(3);
+            if (Input.GetKeyDown(KeyCode.Alpha5)) SelectWatchTab(4);
+            if (Input.GetKeyDown(KeyCode.E)) Confirm();
+            if (Input.GetKeyDown(KeyCode.Escape)) { Cancel(); return; }
 #endif
             if (scroll > .01f) Step(1);
             else if (scroll < -.01f) Step(-1);
@@ -190,7 +316,7 @@ namespace Rokas.Presentation
                 productionRig.SetDuration(selectedHours);
                 productionRig.CrownStep(direction);
             }
-            PlayTick();
+            PlayWheelTick();
         }
 
         private void SetDurationFromDial(float normalizedAngle)
@@ -207,13 +333,101 @@ namespace Rokas.Presentation
                 productionRig.SetDuration(selectedHours);
                 productionRig.CrownStep(steps);
             }
+            PlayWheelTick();
+        }
+
+        private void CycleWatchTab()
+        {
+            if (state != State.TimeSelection || productionRig == null ||
+                !productionRig.Ready) return;
+            if (productionRig.CycleWatchFace())
+            {
+                productionRig.PressWatchHardware();
+                hasExplicitWatchTab = true;
+                if (pngTabs != null)
+                    pngTabs.SetSelected(productionRig.GetSelectedWatchTab(),
+                        false);
+                PlayTick();
+            }
+        }
+
+        private void SelectWatchTab(int tab)
+        {
+            if (state != State.TimeSelection || productionRig == null ||
+                !productionRig.Ready) return;
+            if (productionRig.SelectWatchTab(tab))
+            {
+                productionRig.PressWatchHardware();
+                hasExplicitWatchTab = true;
+                if (pngTabs != null) pngTabs.SetSelected(tab, false);
+                PlayTick();
+            }
+        }
+
+        private void ToggleWatchFocus()
+        {
+            if (state != State.TimeSelection || real3DArmPov == null) return;
+            watchFocus = !watchFocus;
+            if (watchFocus) focusAnchorCaptured = false;
+            if (focusButton != null)
+            {
+                // Never reveal the earlier "PRESS AGAIN" caption or blue
+                // background regardless of the locally installed UI version.
+                foreach (string name in new [] { "Title", "TopRule", "LeftRule" })
+                {
+                    Transform child = focusButton.transform.Find(name);
+                    if (child != null) child.gameObject.SetActive(false);
+                }
+                var bg = focusButton.GetComponent<Image>();
+                if (bg != null)
+                {
+                    bg.color = new Color(1f, 1f, 1f, .001f);
+                    bg.raycastTarget = true;
+                }
+                var legacyBlue = focusButton.GetComponent<RokasBedWatchFocusButton>();
+                if (legacyBlue != null) legacyBlue.enabled = false;
+            }
             PlayTick();
+        }
+
+        private void SetDurationFromPhysicalWatch(int halfHours)
+        {
+            if (state != State.TimeSelection) return;
+            float wanted = QuantizeDuration(halfHours * StepHours);
+            SetDurationFromDial(Mathf.InverseLerp(
+                MinimumHours, MaximumHours, wanted));
+        }
+
+        private void OnNativeOledHover(Vector2 uv,bool active)
+        {
+            if(state==State.TimeSelection && productionRig!=null &&
+                productionRig.Ready)
+                productionRig.SetWatchHover(uv,active);
+        }
+
+        private bool OnNativeOledTap(Vector2 uv)
+        {
+            if (state != State.TimeSelection ||
+                productionRig == null || !productionRig.Ready) return false;
+            bool handled = productionRig.NavigateWatchFace(
+                uv, SetDurationFromPhysicalWatch, Confirm);
+            if (handled)
+            {
+                hasExplicitWatchTab = true;
+                if (pngTabs != null)
+                    pngTabs.SetSelected(productionRig.GetSelectedWatchTab(),
+                        false);
+            }
+            return handled;
         }
 
         public void Confirm()
         {
             if (state == State.TimeSelection && sequence == null)
+            {
+                productionRig?.PressWatchHardware();
                 sequence = runner.StartCoroutine(FinishSleep());
+            }
         }
 
         public void Cancel()
@@ -223,10 +437,22 @@ namespace Rokas.Presentation
             if (runner != null && sequence != null)
                 runner.StopCoroutine(sequence);
             sequence = null;
-            Complete();
+            // ESC / return from bed follows the same fade-to-black,
+            // no instantaneous cut back to the old home illustration.
+            if (runner != null && curtain != null)
+                sequence = runner.StartCoroutine(ExitBedToHub());
+            else Complete(false);
         }
 
-        public void Dispose() => Cancel();
+        // Disposal on scene teardown must not start a new coroutine.
+        public void Dispose()
+        {
+            if (runner != null && sequence != null)
+                runner.StopCoroutine(sequence);
+            sequence = null;
+            cancelRequested = true;
+            Complete(false);
+        }
 
         private void BuildOverlay()
         {
@@ -248,9 +474,27 @@ namespace Rokas.Presentation
                 0, 0, 1920, 1080);
             // Begin in the untouched home view, then swap under darkness.
             lyingPov.color = new Color(1f, 1f, 1f, 0f);
-            blurredPov = soft == null ? null :
+            // Build a stronger, but still subtle, wake-only defocus plate.
+            // This inexpensive 2-pass downsample runs ONCE behind the bed
+            // entry curtain, not during the 3D arm animation or each frame.
+            // The earlier soft photo was sometimes essentially sharp.
+            if (ceiling != null)
+            {
+                RenderTexture down = RenderTexture.GetTemporary(72, 40, 0);
+                down.filterMode = FilterMode.Bilinear;
+                runtimeBlur = new RenderTexture(256, 144, 0,
+                    RenderTextureFormat.ARGB32);
+                runtimeBlur.filterMode = FilterMode.Bilinear;
+                runtimeBlur.Create();
+                Graphics.Blit(soft != null ? (Texture)soft : ceiling, down);
+                Graphics.Blit(down, runtimeBlur);
+                RenderTexture.ReleaseTemporary(down);
+            }
+            Texture blurredTexture = runtimeBlur != null ?
+                (Texture)runtimeBlur : (Texture)soft;
+            blurredPov = blurredTexture == null ? null :
                 ui.Art(root, "LyingCeilingPOV_SoftBlur",
-                    soft, 0, 0, 1920, 1080);
+                    blurredTexture, 0, 0, 1920, 1080);
             if (blurredPov != null)
                 blurredPov.color = new Color(1f, 1f, 1f, 0f);
             armPov = ui.Art(root, "KeikoArmWatch_ApprovedComposite",
@@ -261,8 +505,12 @@ namespace Rokas.Presentation
             // If the corrected V3 production asset package is installed,
             // place the REAL skinned 3D hand/watch above the ceiling plate.
             // Without it the previous photo presentation remains available.
+            float rigInitStarted = Time.realtimeSinceStartup;
             productionRig = RokasBedSleepProductionRigBridge.TryCreate(
                 startHours, session.State.lampOn);
+            Debug.Log("[ROKAS BED PERF V13] hand rig initialization=" +
+                ((Time.realtimeSinceStartup - rigInitStarted) * 1000f).ToString("0.0") +
+                "ms, genuine3D=" + (productionRig != null && productionRig.Ready));
             if (productionRig != null && productionRig.Ready)
             {
                 real3DArmPov = ui.Art(root,
@@ -289,8 +537,9 @@ namespace Rokas.Presentation
             alarmControls.blocksRaycasts = false;
             alarmControls.interactable = false;
             alarmButton = ui.Button(alarmControls.transform, "SetAlarm",
-                "ПОСТАВИТЬ БУДИЛЬНИК", 722, 941, 476, 75,
+                "ПОСТАВИТЬ БУДИЛЬНИК", 744, 910, 432, 144,
                 OpenAlarm, true);
+            RokasBedAuthoredActionButton.Apply(alarmButton, "SetAlarmButton");
             if (!armWatchAvailable)
             {
                 alarmButton.interactable = false;
@@ -329,7 +578,8 @@ namespace Rokas.Presentation
                 new Color(1f, 1f, 1f, .001f), true);
             watchHitRect = hit.rectTransform;
             var pointer = hit.gameObject.AddComponent<RokasBedWatchPointer>();
-            pointer.Configure(Step, Confirm, SetDurationFromDial);
+            pointer.Configure(Step, Confirm, SetDurationFromDial,
+                OnNativeOledTap, OnNativeOledHover);
             // Clock face itself takes mouse wheel/drag. Small external
             // affordances are secondary, not the primary selection UI.
             ui.Button(watchControls.transform, "WatchMinus", "−30м",
@@ -351,27 +601,60 @@ namespace Rokas.Presentation
                 if (plus != null) plus.gameObject.SetActive(false);
                 if (confirm != null) confirm.gameObject.SetActive(false);
             }
-            currentClock = ui.Label(watchControls.transform,
-                "CurrentGameTime", "", 739, 908, 460, 39,
-                18, UiKit.Muted, false, TextAnchor.MiddleCenter);
-            alarmHint = ui.Label(watchControls.transform,
-                "WatchControlsHint",
-                "КОЛЁСИКО / ПЕРЕТАСКИВАНИЕ  •  30 МИН",
-                630, 958, 700, 33, 17, UiKit.Muted,
-                false, TextAnchor.MiddleCenter);
+            // New authentic PNG tabs replace the verbose under-hand
+            // labels. Fallback photo path retains the original text.
+            if (productionRig == null || !productionRig.Ready)
+            {
+                currentClock = ui.Label(watchControls.transform,
+                    "CurrentGameTime", "", 739, 908, 460, 39,
+                    18, UiKit.Muted, false, TextAnchor.MiddleCenter);
+                alarmHint = ui.Label(watchControls.transform,
+                    "WatchControlsHint", "КОЛЁСИКО / ПЕРЕТАСКИВАНИЕ  •  30 МИН",
+                    630, 958, 700, 33, 17, UiKit.Muted,
+                    false, TextAnchor.MiddleCenter);
+            }
+            else
+            {
+                focusButton = ui.Button(watchControls.transform,
+                    "ConfigureWatchTime", "НАСТРОИТЬ ВРЕМЯ",
+                    744, 910, 432, 144, ToggleWatchFocus, true);
+                // Legacy focus feedback paints a blue rectangle over the
+                // user's authored gold PNG. Only the new gold hover remains.
+                RokasBedAuthoredActionButton.Apply(focusButton, "ConfigureTimeButton");
+                // Old focus component re-tints this Button's Graphic blue.
+                // Our authored PNG already owns all hover feedback.
+                var legacyFocus = focusButton.GetComponent<RokasBedWatchFocusButton>();
+                if (legacyFocus != null) legacyFocus.enabled = false;
+            }
 
-            ui.Button(root, "ReturnFromBed", "ВСТАТЬ / ESC",
-                1549, 65, 274, 59, Cancel);
+            exitBedButton = ui.Button(root, "ReturnFromBed",
+                "ВСТАТЬ / ESC", 1549, 65, 274, 59, Cancel);
 
-            topEyelid = ui.Box(root, "BedSleepUpperEyelid",
-                0, 0, 1920, 0, Color.black);
-            bottomEyelid = ui.Box(root, "BedSleepLowerEyelid",
-                0, 1080, 1920, 0, Color.black);
+            // No legacy rectangular bars: the mask is the only source of
+            // eye closure. The normal curtain is for video/scene handoff.
             curtain = ui.Box(root, "BedSleepLaptopStyleDarkCurtain",
                 0, 0, 1920, 1080,
                 new Color(.008f, .013f, .021f, 0f), false);
             // Transparent end-of-frame curtain never blocks the watch.
             curtain.raycastTarget = false;
+            eyeAperture = new RokasSleepEyeAperture(root);
+            eyeAperture.SetVisible(true);
+            keikoDream = new RokasKeikoDreamLoop(root); // hidden until sleeping
+            // Independent streaming-audio fallback: Unity VideoPlayer sometimes
+            // renders the clip while losing its embedded AAC audio on Windows.
+            // This is the exact user-supplied video's looped soundtrack, not a
+            // generated chime. Dedicated source avoids muting with rain/BGM.
+            keikoDreamClip = Resources.Load<AudioClip>(
+                "BedSleep/Audio/KeikoDreamAudio");
+            if (keikoDreamClip != null)
+            {
+                keikoDreamAudio = root.gameObject.AddComponent<AudioSource>();
+                keikoDreamAudio.playOnAwake = false;
+                keikoDreamAudio.loop = true;
+                keikoDreamAudio.spatialBlend = 0f;
+                keikoDreamAudio.volume = 0f;
+                keikoDreamAudio.clip = keikoDreamClip;
+            }
             SetEyelids(0f);
 
             audio = root.gameObject.AddComponent<AudioSource>();
@@ -379,23 +662,49 @@ namespace Rokas.Presentation
             audio.spatialBlend = 0f;
             audio.volume = .30f;
             tickClip = BuildTick();
+            recordedWheelClip = Resources.Load<AudioClip>(
+                "BedSleep/Audio/Watch_Wheel_Single");
+            sitOnBedClip = Resources.Load<AudioClip>(
+                "BedSleep/Audio/Sit_On_Bed");
+            settlingToSleepClip = Resources.Load<AudioClip>(
+                "BedSleep/Audio/Going_To_Sleep");
+            recordedWakeClip = Resources.Load<AudioClip>(
+                "BedSleep/Audio/Wake_Up_Alarm");
+            if (productionRig != null && productionRig.Ready)
+            {
+                pngTabs = watchControls.gameObject.AddComponent<RokasBedWatchPngTabs>();
+                pngTabs.Initialize(watchControls.transform,
+                    SelectWatchTab, Confirm, Cancel, audio, tickClip);
+                // Never display a second EXIT button over the authored PNG.
+                if (pngTabs.Available && exitBedButton != null)
+                    exitBedButton.gameObject.SetActive(false);
+            }
             RefreshWatch();
         }
 
         private IEnumerator Play()
         {
             state = State.TransitionIn;
-            // Same dark-curtain handoff grammar as the laptop; no FPS
-            // transform or Camera.main. Midpoint hides the art change.
-            yield return FadeCurtain(0f, 1f, .60f);
+            // Immediate fade starts BEFORE the expensive production watch,
+            // video and editor sources are constructed.
+            yield return FadeEntryCurtain(0f, 1f, .55f);
             if (cancelRequested) yield break;
-            lyingPov.color = Color.white;
-            yield return FadeCurtain(1f, 0f, .65f);
+            BuildOverlay();
+            PlayAuthoredFoley(sitOnBedClip, .88f);
+            if (entryCurtain != null)
+                entryCurtain.transform.SetAsLastSibling();
+            if (lyingPov != null) lyingPov.color = Color.white;
+            yield return FadeEntryCurtain(1f, 0f, .62f);
+            if (entryCurtain != null)
+            {
+                UnityEngine.Object.Destroy(entryCurtain.gameObject);
+                entryCurtain = null;
+            }
 
             state = State.LyingViewActive;
-            yield return Wait(.35f);
+            yield return Wait(.10f);
             state = State.AlarmButtonVisible;
-            yield return FadeControls(alarmControls, 0f, 1f, .38f);
+            yield return FadeControls(alarmControls, 0f, 1f, .22f);
             alarmControls.blocksRaycasts = true;
             alarmControls.interactable = true;
             sequence = null;
@@ -413,11 +722,19 @@ namespace Rokas.Presentation
         private IEnumerator RaiseWatch()
         {
             state = State.WatchRaise;
+            watchFocus = false;
+            focusAnchorCaptured = false;
+            hasExplicitWatchTab = false;
+            if (pngTabs != null) pngTabs.SetSelected(-1, false);
+            focusBlend = 0f;
+            if (real3DArmPov != null) real3DArmPov.uvRect =
+                new Rect(0f, 0f, 1f, 1f);
             productionRig?.ChangeState("WatchRaise");
             yield return FadeControls(alarmControls, alarmControls.alpha, 0f,
                 .25f);
             yield return FadeArm(0f, 1f, .82f);
             state = State.TimeSelection;
+            lastSystemMinute=-1;
             productionRig?.ChangeState("TimeSelection");
             if (productionRig != null && productionRig.Ready &&
                 watchHitRect != null)
@@ -436,6 +753,25 @@ namespace Rokas.Presentation
 
         private IEnumerator FinishSleep()
         {
+            // Opt-in cycle planning snaps the sleep session to a nearby
+            // 90-minute multiple BEFORE committing the canonical ROKAS time.
+            // Phase display itself remains a planning estimate, NOT sensor data.
+            if(productionRig != null && productionRig.Ready &&
+               productionRig.GetWatchSetting(3)==1)
+            {
+                float aligned=QuantizeDuration(
+                    Mathf.Round(selectedHours/1.5f)*1.5f);
+                if(!Mathf.Approximately(aligned,selectedHours))
+                {
+                    selectedHours=aligned;
+                    RefreshWatch();
+                    productionRig.SetDuration(selectedHours);
+                }
+            }
+            int alarmMode=productionRig != null && productionRig.Ready ?
+                productionRig.GetWatchSetting(0) : 1;
+            bool alarmEnabled=productionRig == null ||
+                !productionRig.Ready || productionRig.GetWatchSetting(1)==1;
             state = State.ConfirmSelection;
             productionRig?.Confirm();
             productionRig?.ChangeState("ConfirmSelection");
@@ -451,11 +787,38 @@ namespace Rokas.Presentation
             yield return FadeArm(1f, 0f, .76f);
             yield return Wait(.30f);
             state = State.EyesClose;
-            // An intentionally heavy partial blink precedes the last close.
-            yield return FadeEyelids(0f, .45f, .46f);
-            yield return Wait(.16f);
-            yield return FadeEyelids(.45f, .20f, .38f);
-            yield return FadeEyelids(.20f, 1f, 1.12f);
+            // Never fade a fullscreen black rectangle while the character
+            // is actually closing the two binocular eye apertures.
+            if (curtain != null)
+                curtain.color = new Color(.008f, .013f, .021f, 0f);
+            if (eyeAperture != null)
+            {
+                eyeAperture.SetVisible(true);
+                eyeAperture.BringToFront();
+            }
+            backgroundAudio?.SetBedSleepMusicDucking(true);
+            // Sound when sleep is the player's natural settling/yawn. Trigger
+            // ONCE at the start of lying down; not on a watch UI button.
+            PlayAuthoredFoley(settlingToSleepClip, .85f);
+            // The player yawns FIRST. Only after the recorded yawn has
+            // finished do two real curved black lids close over the room.
+            // No full-screen fade may replace their physical silhouette.
+            yield return Wait(settlingToSleepClip != null ?
+                Mathf.Max(.20f, settlingToSleepClip.length - .12f) : .65f);
+            if (eyeAperture != null) eyeAperture.BringToFront();
+            yield return FadeEyelids(0f, 1f, 1.85f);
+            yield return Wait(.30f);
+            // Keep a solid black bed background behind the author video,
+            // including its exit dissolve and dark pause. It must NOT
+            // crossfade to the ceiling before the real alarm begins.
+            if (curtain != null)
+            {
+                curtain.color = new Color(.008f,.013f,.021f,1f);
+                curtain.transform.SetAsLastSibling();
+            }
+            // This independently sorted canvas sits above ordinary videos:
+            // disable while sleeping, restore it closed before waking.
+            eyeAperture?.SetVisible(false);
             state = State.SleepCommitted;
             // ROKAS remains the ONLY owner of the durable save.
             // V3's optional event must not create a parallel save path.
@@ -474,16 +837,160 @@ namespace Rokas.Presentation
                 session.State.hubSleepInitialized = true;
                 save?.Invoke();
             }
-            yield return Wait(.70f);
-            yield return FadeEyelids(1f, 0f, 1.0f);
-            Complete();
+            // Keep the eye mask CLOSED while Keiko dreams on the supplied
+            // black-backed animated art. The video was crossfaded end-to-start
+            // to a 7.2s seamless, SILENT loop. Unity's background music is
+            // already faded independently through RokasAudio.Tick.
+            bool dreamPlaying = false;
+            if (keikoDream != null && keikoDream.Available)
+            {
+                yield return keikoDream.AwaitPrepared(2.5f);
+                // Prefer original separately imported soundtrack: video
+                // decoder remains visual-only and cannot silently drop audio.
+                bool dedicatedAudio = keikoDreamAudio != null;
+                keikoDream.SetAudioMix(dedicatedAudio ? 0f :
+                    (backgroundAudio != null && backgroundAudio.VnMuted ? 0f :
+                    (backgroundAudio != null ? backgroundAudio.VideoVolume * .8f : .55f)));
+                dreamPlaying = keikoDream.Begin();
+                if (dreamPlaying)
+                {
+                    keikoDream.BringToFront();
+                    if (dedicatedAudio)
+                    {
+                        keikoDreamAudio.time = 0f;
+                        keikoDreamAudio.Play();
+                    }
+                }
+            }
+            Debug.Log("[ROKAS DREAM V5] Video asset " +
+                (keikoDream != null && keikoDream.Available ? "loaded" : "missing/failed") +
+                "; prepared=" + dreamPlaying +
+                "; gameSleepHours=" + selectedHours.ToString("0.#") +
+                "; musicDucking=active. StreamingAssets/BedSleep/KeikoSleepLoop.mp4");
+            if (dreamPlaying)
+            {
+                // Slow dissolve into the authored dreaming animation;
+                // sound follows the SAME curve for clean, seamless entry.
+                // Smoothly exit before the original ~7.2s loop repeats:
+                // 0.90s entry + 3.80s hold + 2.20s exit = 6.90s.
+                // Original soundtrack and picture use the identical curve.
+                yield return FadeDream(0f, 1f, .90f);
+                yield return Wait(RestingInDarkSeconds);
+                yield return FadeDream(1f, 0f, 2.20f);
+                if (keikoDreamAudio != null) keikoDreamAudio.Stop();
+                keikoDream.End();
+            }
+            else yield return Wait(RestingInDarkSeconds);
+            // Let the completely closed eyelids stay black for a beat AFTER
+            // Keiko's final cloud disappears, BEFORE the alarm rings.
+            yield return Wait(.45f);
+            // Important: the DREAM is layered on top of eye closure. Bring
+            // the translucent two-oval eye mask over the ceiling BEFORE
+            // sounding the real alarm and opening Keiko's eyes.
+            if (eyeAperture != null)
+            {
+                eyeAperture.SetOpen(0f);
+                eyeAperture.SetVisible(true);
+                eyeAperture.BringToFront();
+            }
+            // The closed halfovals shield the curtain handoff; release the
+            // blackout here so the ceiling becomes visible INSIDE the two
+            // opening eye shapes instead of a uniform rectangular fade.
+            if (curtain != null)
+                curtain.color = new Color(.008f,.013f,.021f,0f);
+            AudioClip wakeCue = null;
+            bool generatedWakeCue = false;
+            if (alarmEnabled && audio != null)
+            {
+                wakeCue = recordedWakeClip;
+                if (wakeCue == null)
+                {
+                    wakeCue = BuildWakeCue(alarmMode);
+                    generatedWakeCue = true;
+                }
+                // Preserve the existing soft/standard/strong setting.
+                audio.PlayOneShot(wakeCue,
+                    alarmMode == 0 ? .48f : (alarmMode == 1 ? .72f : .86f));
+                // Start opening WHILE the actual alarm rings, not after
+                // waiting for the entire sound to finish in darkness.
+                yield return Wait(.20f);
+            }
+            wakingReveal = true;
+            if (blurredPov != null)
+                blurredPov.color = new Color(1f,1f,1f,.96f);
+            // Make two curved half-oval openings visible with a blurred
+            // ceiling beneath. A longer natural blink removes hard cuts.
+            yield return FadeEyelids(1f, 0f, 3.10f);
+            wakingReveal = false;
+            // Keep a faint defocus AFTER the eyelids finish opening, then
+            // regain focus gently. Do not snap the overlay to alpha=0.
+            if (blurredPov != null)
+            {
+                const float settleTime = .90f;
+                for (float t = 0f; t < settleTime;
+                    t += Mathf.Max(.002f, Time.unscaledDeltaTime))
+                {
+                    float remaining = 1f - CinematicEase(
+                        Mathf.Clamp01(t / settleTime));
+                    blurredPov.color = new Color(1f, 1f, 1f, .20f * remaining);
+                    yield return null;
+                }
+                blurredPov.color = new Color(1f,1f,1f,0f);
+            }
+            if (generatedWakeCue && wakeCue != null)
+                UnityEngine.Object.Destroy(wakeCue);
+            // The same mattress/fabric sample is heard once when sitting
+            // down and once when finally getting UP, never a generic click.
+            PlayAuthoredFoley(sitOnBedClip, .88f);
+            yield return Wait(sitOnBedClip != null ?
+                Mathf.Max(.9f, sitOnBedClip.length) : .9f);
+            // One sleep closure, one awakening opening; NO third blink.
+            // Return to the hub using only its existing cinematic curtain.
+            // Disable the eye canvas before handoff so its outline cannot
+            // flash on top of the crossfade to the unchanged hub.
+            eyeAperture?.SetVisible(false);
+            lastEyeClosure = 0f;
+            yield return ExitBedToHub();
+        }
+
+        private IEnumerator FadeDream(float from, float to, float duration)
+        {
+            if (keikoDream == null) yield break;
+            for (float t = 0f; t < duration;
+                t += Mathf.Max(.002f, Time.unscaledDeltaTime))
+            {
+                keikoDream.Alpha = Mathf.Lerp(from,to,
+                    CinematicEase(Mathf.Clamp01(t/duration)));
+                if (keikoDreamAudio != null)
+                    keikoDreamAudio.volume = keikoDream.Alpha *
+                        (backgroundAudio != null && backgroundAudio.VnMuted ?
+                        0f : (backgroundAudio != null ?
+                        backgroundAudio.VideoVolume * .82f : .55f));
+                yield return null;
+            }
+            keikoDream.Alpha = to;
+            if (keikoDreamAudio != null)
+                keikoDreamAudio.volume = to *
+                    (backgroundAudio != null && backgroundAudio.VnMuted ?
+                    0f : (backgroundAudio != null ?
+                    backgroundAudio.VideoVolume * .82f : .55f));
+        }
+
+        private void PlayAuthoredFoley(AudioClip clip, float gain)
+        {
+            if (audio == null || clip == null || cancelRequested) return;
+            audio.pitch = 1f;
+            audio.PlayOneShot(clip, Mathf.Clamp01(gain));
         }
 
         private IEnumerator FadeArm(float from, float to, float duration)
         {
+            float longestFrameMs = 0f;
             for (float t = 0; t < duration; t += Mathf.Max(
                 Time.unscaledDeltaTime, .002f))
             {
+                longestFrameMs = Mathf.Max(longestFrameMs,
+                    Time.unscaledDeltaTime * 1000f);
                 float u = Mathf.SmoothStep(0f, 1f,
                     Mathf.Clamp01(t / duration));
                 handOpacity = Mathf.Lerp(from, to, u);
@@ -515,6 +1022,11 @@ namespace Rokas.Presentation
                 armPov.color = new Color(1f, 1f, 1f, to);
             if (blurredPov != null)
                 blurredPov.color = new Color(1f, 1f, 1f, .12f * to);
+            if (to > from)
+                Debug.Log("[ROKAS BED PERF V13] raise worst-frame=" +
+                    longestFrameMs.ToString("0.0") + "ms (" +
+                    (1000f / Mathf.Max(1f, longestFrameMs)).ToString("0") +
+                    "fps minimum). Compare Profiler CPU/GPU timelines.");
         }
 
         private IEnumerator FadeControls(CanvasGroup group, float from,
@@ -531,14 +1043,39 @@ namespace Rokas.Presentation
             group.alpha = to;
         }
 
+        private static float CinematicEase(float t)
+        {
+            // Quintic ease has zero first AND second derivatives at the ends.
+            // Avoid the visible snap of the previous short 0.6-second fade.
+            t = Mathf.Clamp01(t);
+            return t * t * t * (t * (t * 6f - 15f) + 10f);
+        }
+
+        private IEnumerator FadeEntryCurtain(float from, float to,
+            float duration)
+        {
+            if (entryCurtain == null) yield break;
+            for (float t = 0f; t < duration;
+                t += Mathf.Max(.002f, Time.unscaledDeltaTime))
+            {
+                if (entryCurtain == null) yield break;
+                entryCurtain.color = new Color(.008f, .013f, .021f,
+                    Mathf.Lerp(from, to,
+                        CinematicEase(Mathf.Clamp01(t/duration))));
+                yield return null;
+            }
+            if (entryCurtain != null)
+                entryCurtain.color =
+                    new Color(.008f,.013f,.021f,to);
+        }
+
         private IEnumerator FadeCurtain(float from, float to, float duration)
         {
             for (float t = 0; t < duration; t += Mathf.Max(
                 Time.unscaledDeltaTime, .002f))
             {
                 curtain.color = new Color(.008f, .013f, .021f,
-                    Mathf.Lerp(from, to, Mathf.SmoothStep(0f, 1f,
-                        Mathf.Clamp01(t / duration))));
+                    Mathf.Lerp(from, to, CinematicEase(Mathf.Clamp01(t / duration))));
                 yield return null;
             }
             curtain.color = new Color(.008f, .013f, .021f, to);
@@ -546,12 +1083,36 @@ namespace Rokas.Presentation
 
         private IEnumerator FadeEyelids(float from, float to, float duration)
         {
+            if (eyeAperture != null)
+            {
+                // Opening has a distinct anatomical timing curve: upper lid
+                // retracts ahead of the lower lid. Preserve existing scene
+                // timing, video and save logic without additional fades.
+                eyeAperture.SetWaking(from > to);
+                eyeAperture.SetVisible(true);
+                eyeAperture.BringToFront();
+                if (!eyeAperture.IsVisible && !warnedHiddenVisionMask)
+                {
+                    Debug.LogError("[ROKAS ANATOMIC V12] Eye Canvas is not visible at transition start.");
+                    warnedHiddenVisionMask = true;
+                }
+            }
             for (float t = 0; t < duration; t += Mathf.Max(
                 Time.unscaledDeltaTime, .002f))
             {
-                SetEyelids(Mathf.Lerp(from, to,
-                    Mathf.SmoothStep(0f, 1f,
-                        Mathf.Clamp01(t / duration))));
+                float amount = Mathf.Lerp(from, to,
+                    CinematicEase(Mathf.Clamp01(t / duration)));
+                SetEyelids(amount);
+                if (wakingReveal && blurredPov != null)
+                {
+                    float clear = 1f - amount;
+                    // Mild-to-strong sleepy vision initially, retaining
+                    // a faint haze until the separate focus-settle phase.
+                    float blur = .96f * Mathf.Pow(amount, .60f) +
+                        .20f * (1f - amount);
+                    blurredPov.color = new Color(1f,1f,1f,
+                        Mathf.Clamp01(blur));
+                }
                 yield return null;
             }
             SetEyelids(to);
@@ -559,15 +1120,17 @@ namespace Rokas.Presentation
 
         private void SetEyelids(float closure)
         {
-            float height = 540f * Mathf.Clamp01(closure);
-            if (topEyelid != null)
-                topEyelid.rectTransform.sizeDelta = new Vector2(1920, height);
-            if (bottomEyelid != null)
+            lastEyeClosure = Mathf.Clamp01(closure);
+            if (eyeAperture != null)
             {
-                bottomEyelid.rectTransform.sizeDelta =
-                    new Vector2(1920, height);
-                bottomEyelid.rectTransform.anchoredPosition =
-                    new Vector2(0f, -1080f + height);
+                eyeAperture.SetOpen(1f - lastEyeClosure);
+                return;
+            }
+            if (!warnedMissingVisionMask)
+            {
+                warnedMissingVisionMask = true;
+                Debug.LogError("[ROKAS ANATOMIC V12] Missing organic eyelid overlay; " +
+                    "rectangular fallback is forbidden. Check Unity Console.");
             }
         }
 
@@ -584,11 +1147,50 @@ namespace Rokas.Presentation
                     ClockText(WakeHour(startHours, selectedHours));
         }
 
+        private void PlayWheelTick()
+        {
+            // The hub watch presenter receives scroll even when its native
+            // bridge drives the physical crown. The bridge rotates hardware
+            // but does not necessarily emit a native SFX event; play the
+            // user's wheel recording here for THIS UI-owned dial step.
+            if (audio == null) return;
+            if (Time.unscaledTime - lastRecordedWheelTime < .07f) return;
+            lastRecordedWheelTime = Time.unscaledTime;
+            if (recordedWheelClip != null)
+            {
+                audio.pitch = 1f;
+                audio.PlayOneShot(recordedWheelClip, .21f);
+            }
+            else PlayTick();
+        }
+
         private void PlayTick()
         {
             if (audio == null || tickClip == null) return;
             audio.pitch = UnityEngine.Random.Range(.96f, 1.07f);
             audio.PlayOneShot(tickClip, .23f);
+        }
+
+        private static AudioClip BuildWakeCue(int alarmMode)
+        {
+            const int rate=24000;
+            int mode=Mathf.Clamp(alarmMode,0,2);
+            int count=Mathf.RoundToInt(rate*(mode==2 ? .34f : .22f));
+            float[] samples=new float[count];
+            float hz=mode==0 ? 660f : (mode==1 ? 860f : 1090f);
+            for(int i=0;i<count;i++)
+            {
+                float t=(float)i/rate;
+                float envelope=Mathf.Sin(Mathf.PI*i/(count-1));
+                float doublePulse=mode==2 ?
+                    (.5f+.5f*Mathf.Cos(t*2f*Mathf.PI*9f)) : 1f;
+                samples[i]=Mathf.Sin(2f*Mathf.PI*
+                    (hz*t+95f*t*t))*envelope*doublePulse*.16f;
+            }
+            var cue=AudioClip.Create("ROKAS_Wake_Mode_"+mode,
+                count,1,rate,false);
+            cue.SetData(samples,0);
+            return cue;
         }
 
         private static AudioClip BuildTick()
@@ -615,11 +1217,80 @@ namespace Rokas.Presentation
                 yield return null;
         }
 
-        private void Complete()
+        private IEnumerator ExitBedToHub()
         {
+            if (curtain != null)
+            {
+                // After two eye lenses are CLOSED the player already sees
+                // black: transfer ownership to the normal curtain instantly.
+                // Early ESC still gets the original smooth curtain transition.
+                curtain.transform.SetAsLastSibling();
+                if (lastEyeClosure >= .995f)
+                    curtain.color = new Color(.008f,.013f,.021f,1f);
+                else
+                    yield return FadeCurtain(curtain.color.a, 1f, .94f);
+            }
+            if (cancelRequested && audio != null && sitOnBedClip != null)
+            {
+                // When ESC cancels early, rising still has the mattress sound.
+                audio.PlayOneShot(sitOnBedClip, .88f);
+                yield return Wait(Mathf.Min(.9f, sitOnBedClip.length));
+            }
+            Complete(true);
+        }
+
+        private IEnumerator RevealHubCurtain(Image overlay)
+        {
+            if (overlay == null) yield break;
+            for (float t=0f; t<.88f; t+=Mathf.Max(.002f, Time.unscaledDeltaTime))
+            {
+                if (overlay == null) yield break;
+                float a=1f-CinematicEase(Mathf.Clamp01(t/.88f));
+                overlay.color = new Color(.008f,.013f,.021f,a);
+                yield return null;
+            }
+            if (overlay != null)
+                UnityEngine.Object.Destroy(overlay.gameObject);
+        }
+
+        private void Complete(bool crossfadeToHub = false)
+        {
+            // The original bed root is destroyed below. Duplicate ONLY a
+            // transient black rectangle ABOVE it, then reveal restored home.
+            if (entryCurtain != null)
+            {
+                UnityEngine.Object.Destroy(entryCurtain.gameObject);
+                entryCurtain = null;
+            }
+            // This independent overlay survives the bed-root destruction.
+            if (crossfadeToHub && layer != null && runner != null)
+            {
+                var black = ui.Box(layer,"ROKAS_Sleep_Exit_HubFade",
+                    0,0,1920,1080,new Color(.008f,.013f,.021f,1f));
+                black.raycastTarget=false;
+                black.transform.SetAsLastSibling();
+                runner.StartCoroutine(RevealHubCurtain(black));
+            }
             if (state == State.Idle && root == null) return;
             state = State.Idle;
             sequence = null;
+            // Always restore real background music even if the player
+            // cancelled mid-sleep or video decoding failed.
+            backgroundAudio?.SetBedSleepMusicDucking(false);
+            if (keikoDreamAudio != null)
+            {
+                keikoDreamAudio.Stop();
+                keikoDreamAudio = null; // root owns the component
+            }
+            keikoDreamClip = null; // Resources-owned, don't destroy
+            if (keikoDream != null) { keikoDream.Dispose(); keikoDream = null; }
+            if (eyeAperture != null) { eyeAperture.Dispose(); eyeAperture = null; }
+            if (runtimeBlur != null)
+            {
+                runtimeBlur.Release();
+                UnityEngine.Object.Destroy(runtimeBlur);
+                runtimeBlur = null;
+            }
             productionRig?.Dispose();
             productionRig = null;
             real3DArmPov = null;
@@ -633,8 +1304,14 @@ namespace Rokas.Presentation
             if (tickClip != null)
                 UnityEngine.Object.Destroy(tickClip);
             tickClip = null;
+            recordedWheelClip = null; // Resources-managed: never Destroy()
+            sitOnBedClip = settlingToSleepClip = recordedWakeClip = null;
             alarmControls = watchControls = null;
-            alarmButton = confirmButton = null;
+            alarmButton = confirmButton = focusButton = exitBedButton = null;
+            pngTabs = null;
+            watchFocus = false;
+            focusAnchorCaptured = false;
+            focusBlend = 0f;
             armPov = lyingPov = blurredPov = null;
             onFinished?.Invoke();
         }
@@ -645,19 +1322,67 @@ namespace Rokas.Presentation
     /// hit area is anchored to the projected 3D OLED, not to the old PNG.
     /// </summary>
     public sealed class RokasBedWatchPointer : MonoBehaviour,
-        IDragHandler, IBeginDragHandler, IPointerClickHandler
+        IDragHandler, IBeginDragHandler, IPointerClickHandler,
+        IPointerEnterHandler, IPointerExitHandler
     {
         private Action<int> step;
         private Action confirm;
         private Action<float> setDurationByDial;
+        private Func<Vector2, bool> physicalOledTap;
+        private Action<Vector2,bool> physicalOledHover;
+        private bool pointerInside;
         private float accumulator;
 
         public void Configure(Action<int> stepAction,
-            Action confirmAction, Action<float> dialAction)
+            Action confirmAction, Action<float> dialAction,
+            Func<Vector2, bool> physicalTapAction = null,
+            Action<Vector2,bool> physicalHoverAction = null)
         {
             step = stepAction;
             confirm = confirmAction;
             setDurationByDial = dialAction;
+            physicalOledTap = physicalTapAction;
+            physicalOledHover = physicalHoverAction;
+        }
+
+        public void OnPointerEnter(PointerEventData e)
+        {
+            pointerInside=true;
+            UpdateHover(e.position, e.enterEventCamera);
+        }
+        public void OnPointerExit(PointerEventData e)
+        {
+            pointerInside=false;
+            physicalOledHover?.Invoke(Vector2.zero,false);
+        }
+        private void Update()
+        {
+            if(!pointerInside || physicalOledHover==null)return;
+            Vector2 mp=Vector2.zero;
+#if ENABLE_INPUT_SYSTEM
+            if(Mouse.current!=null)
+                mp=Mouse.current.position.ReadValue();
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            mp=Input.mousePosition;
+#endif
+            // UI canvas is ScreenSpaceOverlay in the existing game.
+            UpdateHover(mp,null);
+        }
+        private void UpdateHover(Vector2 position,Camera cam)
+        {
+            var rt=transform as RectTransform;
+            if(rt==null || physicalOledHover==null) return;
+            Vector2 local;
+            if(!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                rt,position,cam,out local))return;
+            float w=Mathf.Max(rt.rect.width,.001f);
+            float h=Mathf.Max(rt.rect.height,.001f);
+            Vector2 uv=new Vector2(local.x/w,1f+local.y/h);
+            bool valid=pointerInside && uv.x>=0f && uv.x<=1f &&
+                uv.y>=0f && uv.y<=1f;
+            physicalOledHover.Invoke(
+                new Vector2(Mathf.Clamp01(uv.x),Mathf.Clamp01(uv.y)),
+                valid);
         }
 
         public void OnBeginDrag(PointerEventData eventData)
@@ -688,6 +1413,14 @@ namespace Rokas.Presentation
 
             float width = Mathf.Max(rt.rect.width, .001f);
             float height = Mathf.Max(rt.rect.height, .001f);
+            // UiKit watch hit zone is top-left pivot (y goes -height..0).
+            // The actual OLED menu consumes the normalized physical UV,
+            // while the legacy photographic watch keeps its existing dial.
+            Vector2 faceUv = new Vector2(
+                Mathf.Clamp01(local.x / width),
+                Mathf.Clamp01(1f + local.y / height));
+            if (physicalOledTap != null && physicalOledTap(faceUv))
+                return;
             // Tap the bottom confirm area, just like the V3 OLED footer.
             if (local.y <= -height*.76f)
             {

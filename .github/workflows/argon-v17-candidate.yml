@@ -1,0 +1,125 @@
+name: Argon V17 actual FBX reconstruction
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/argon-v17-candidate.yml'
+      - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/build_argon_v17_candidate.py'
+      - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/verify_argon_v17_fbx_pose.py'
+      - 'Assets/Rokas/BedSleep/ArgonIntegration/Tools/verify_argon_v17_single_clip.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build-v17:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Parse production reconstruction script
+        run: python3 -m py_compile Assets/Rokas/BedSleep/ArgonIntegration/Tools/build_argon_v17_candidate.py
+      - name: Install headless Blender
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender
+          blender --version | head -2
+      - name: Build physical unified V17 candidate FBX and authored grip actions
+        run: |
+          blender --background -noaudio --python-exit-code 2 \
+            --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/build_argon_v17_candidate.py \
+            -- Assets/Rokas/BedSleep/ArgonSource/Models/ROKAS_Keiko_FPS_Arm_Rigged.fbx \
+            Artifacts/ArgonV17Candidate
+      - name: Re-import exported FBX and prove real finger deformation in authored poses
+        run: |
+          blender --background -noaudio --python-exit-code 2 \
+            --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/verify_argon_v17_fbx_pose.py \
+            -- Artifacts/ArgonV17Candidate/ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx \
+            Artifacts/ArgonV17Candidate
+      - name: Prove all three paired corrective+skeletal FBX actions actually animate
+        run: |
+          for clip in V17_Grip V17_Index V17_Living; do
+            blender --background -noaudio --python-exit-code 2 \
+              --python Assets/Rokas/BedSleep/ArgonIntegration/Tools/verify_argon_v17_single_clip.py \
+              -- "Artifacts/ArgonV17Candidate/ROKAS_V17_${clip}_Animated.fbx" "${clip}" \
+              Artifacts/ArgonV17Candidate
+          done
+      - name: Convert pose proof geometry to reliable images; reject black outputs
+        run: |
+          python3 -m pip install --quiet --user pillow cairosvg
+          python3 - <<'PY'
+          import pathlib,cairosvg,statistics
+          from PIL import Image,ImageStat
+          directory=pathlib.Path('Artifacts/ArgonV17Candidate')
+          files=list(directory.glob('V17_FBX_*.svg'))+list(directory.glob('V17_Index*.svg'))+list(directory.glob('V17_Little*.svg'))+list(directory.glob('V20_FBX_*.svg'))
+          assert len(files)>=8, f'Expected real exported-mesh pose visuals, got {len(files)}'
+          for svg in files:
+              target=svg.with_suffix('.png')
+              cairosvg.svg2png(url=str(svg),write_to=str(target))
+              im=Image.open(target).convert('RGB')
+              stats=ImageStat.Stat(im)
+              assert min(stats.stddev)>8, f'Invalid/black pose render: {target}: {stats.stddev}'
+              print('VALID FBX VISUAL',target,im.size,stats.stddev)
+          PY
+      - name: Validate actual candidate FBX and deformation metadata
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+          d=pathlib.Path('Artifacts/ArgonV17Candidate')
+          j=json.loads((d/'ROKAS_V17_BuildMetrics.json').read_text())
+          assert j['source_components']==6 and j['candidate_components']==1, j
+          assert j['exposed_edges']==0 and j['nonmanifold_edges']==0, j
+          assert len(j['corrective_shapes'])>=5 and len(j['authored_actions'])>=3, j
+          assert (d/j['output_fbx']).stat().st_size>100000
+          assert (d/'ROKAS_V17_FBX_Roundtrip_Motion.json').stat().st_size>300
+          assert (d/'V17_FBX_Neutral.png').stat().st_size>10000
+          assert (d/'V17_FBX_Full_Grip.png').stat().st_size>10000
+          assert (d/'V20_FBX_Cuff_Neutral.png').stat().st_size>10000
+          assert (d/'V20_FBX_Cuff_Grip.png').stat().st_size>10000
+          assert j.get('authored_cuff_fit',{}).get('runtime_triangle_mask') is False
+          assert j.get('authored_cuff_fit',{}).get('affected_vertices',0)>500
+          assert j.get('finger_vertex_owners',{}).get('SourceForearm',0)>500
+          assert len(j.get('paired_corrective_clip_fbxs',[]))==3, j
+          for label in ('V17_Grip','V17_Index','V17_Living'):
+            assert (d/f'ROKAS_V17_{label}_Animated.fbx').stat().st_size>100000
+            corrected=json.loads((d/f'ROKAS_{label}_PairedClipQA.json').read_text())
+            assert corrected['corrective_weight_at_peak'] > corrected['corrective_weight_at_start']
+            print('PASS REAL CORRECTIVE CLIP:', label)
+          print('V17 REAL FBX GENERATED, STRUCTURAL PASS; UNITY VISUAL APPROVAL STILL REQUIRED')
+          PY
+      - name: Commit actual V17 FBX as quarantined PR-only candidate (NEVER REPLACE V16)
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.number == 13 && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          TARGET_BRANCH: ${{ github.event.pull_request.head.ref }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -eu
+          test "$TARGET_BRANCH" = "codex/bedsleep-argon-import-candidate"
+          test -s Artifacts/ArgonV17Candidate/ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx
+          test -s Artifacts/ArgonV17Candidate/ROKAS_V17_BuildMetrics.json
+          test -s Artifacts/ArgonV17Candidate/ROKAS_V17_FBX_Roundtrip_Motion.json
+          git fetch --no-tags origin "$TARGET_BRANCH"
+          test "$(git rev-parse FETCH_HEAD)" = "$EXPECTED_SHA" || {
+            echo "PR branch moved during V17 build; refusing overwrite"; exit 1;
+          }
+          git checkout -B "$TARGET_BRANCH" "$EXPECTED_SHA"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f Artifacts/ArgonV17Candidate/ROKAS_Keiko_FPS_Arm_Rigged_V17_Candidate.fbx
+          git add -f Artifacts/ArgonV17Candidate/ROKAS_V17_BuildMetrics.json
+          git add -f Artifacts/ArgonV17Candidate/ROKAS_V17_FBX_Roundtrip_Motion.json
+          git add -f Artifacts/ArgonV17Candidate/ROKAS_V17_*_Animated.fbx
+          git add -f Artifacts/ArgonV17Candidate/ROKAS_V17_*_PairedClipQA.json
+          if ! git diff --cached --quiet; then
+            git commit -m "WIP: Preserve real skinned V17 FBX as inactive candidate; V16 remains production"
+            git push origin HEAD:"$TARGET_BRANCH"
+          fi
+          echo "V17 FBX preserved only under Artifacts/; never linked to live Unity."
+      - name: Publish unmerged V17 candidate asset and geometry proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROKAS-V17-physical-hand-candidate
+          path: Artifacts/ArgonV17Candidate/
+          if-no-files-found: warn
+          retention-days: 14
