@@ -175,6 +175,14 @@ namespace Rokas.Core
         private readonly FoodService food;
 
         public event Action Changed;
+        // One sound cue for any newly applied reaction, regardless of its sender.
+        public event Action<string, string> ReactionApplied;
+
+        private void NotifyReactionApplied(string contactId, string messageId)
+        {
+            Action<string, string> handler = ReactionApplied;
+            if (handler != null) handler(contactId, messageId);
+        }
 
         // A durable transaction can publish a new message state created by a temporary service.
         internal void SignalPublishedState() { NotifyChanged(); }
@@ -320,6 +328,7 @@ namespace Rokas.Core
                 if (string.Equals(entry.reactionId ?? string.Empty, next, StringComparison.Ordinal)) return false;
                 entry.reactionId = next;
                 NotifyChanged();
+                if (next.Length > 0) NotifyReactionApplied(contactId, messageId);
                 return true;
             }
             return false;
@@ -337,6 +346,7 @@ namespace Rokas.Core
                 if (string.Equals(entry.npcReactionId ?? string.Empty, next, StringComparison.Ordinal)) return false;
                 entry.npcReactionId = next;
                 NotifyChanged();
+                if (next.Length > 0) NotifyReactionApplied(contactId, messageId);
                 return true;
             }
             return false;
