@@ -797,6 +797,28 @@ namespace Rokas.Core
                 data.rosterVersion = 1;
             }
 
+            // One-time migration: old Guild chat is replaced by workshop-authored messages.
+            // Preserve contract progress, events and legacy contact records.
+            if (data.rosterVersion < 2)
+            {
+                ConversationState guild = FindConversation("guild");
+                if (guild != null)
+                {
+                    if (guild.entries != null) guild.entries.Clear();
+                    if (guild.selectedChoiceIds != null) guild.selectedChoiceIds.Clear();
+                    if (guild.completedDialogueIds != null) guild.completedDialogueIds.Clear();
+                    if (guild.liveTopicProgress != null) guild.liveTopicProgress.Clear();
+                    guild.unreadCount = 0;
+                    guild.lastSequence = 0;
+                    guild.branchState = string.Empty;
+                    guild.liveActiveTopicId = string.Empty;
+                    guild.liveFlowIdentity = string.Empty;
+                    guild.liveWaitingForChoice = false;
+                }
+                data.livePendingChains.RemoveAll(p => p != null && p.contactId == "guild");
+                data.livePendingReactions.RemoveAll(p => p != null && p.contactId == "guild");
+                data.rosterVersion = 2;
+            }
             Deduplicate(data.deliveredEventIds);
             int highestSequence = Math.Max(0, data.nextSequence);
             for (int index = data.conversations.Count - 1; index >= 0; index--)
