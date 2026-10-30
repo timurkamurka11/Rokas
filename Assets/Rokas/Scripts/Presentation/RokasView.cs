@@ -221,7 +221,7 @@ namespace Rokas.Presentation
             LastMessageAudioCue = string.Empty;
             MessageAudioCueCount = 0;
             session.Messages.Changed += HandleMessageRoutingChanged;
-            session.LiveMessages.Signal += HandleLiveMessengerSignal;
+            session.Messages.ReactionApplied += HandleMessageReactionApplied;
             session.Changed += Refresh;
             session.Combat.Hit += OnHit;
             session.Combat.ActionResolved += mission.OnAction;
@@ -231,9 +231,9 @@ namespace Rokas.Presentation
             Refresh();
         }
 
-        private void HandleLiveMessengerSignal(LiveMessengerSignal signal)
+        private void HandleMessageReactionApplied(string contactId, string messageId)
         {
-            if (signal == null || signal.Kind != LiveMessengerSignalKind.ReactionChanged) return;
+            // Runs for player and NPC workshop reactions. Reuse the original ROKAS audio bus.
             LastMessageAudioCue = "Reaction";
             MessageAudioCueCount++;
             audio.PlayMessageCue("Reaction");
@@ -921,7 +921,7 @@ namespace Rokas.Presentation
             hubDialogue?.Dispose();
             messageNotifications.Dispose();
             session.Messages.Changed -= HandleMessageRoutingChanged;
-            session.LiveMessages.Signal -= HandleLiveMessengerSignal;
+            session.Messages.ReactionApplied -= HandleMessageReactionApplied;
             session.Changed -= Refresh;
             session.Combat.Hit -= OnHit;
             session.Combat.ActionResolved -= mission.OnAction;

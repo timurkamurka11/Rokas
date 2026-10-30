@@ -175,6 +175,14 @@ namespace Rokas.Core
         private readonly FoodService food;
 
         public event Action Changed;
+        // One sound cue for any newly applied reaction, regardless of its sender.
+        public event Action<string, string> ReactionApplied;
+
+        private void NotifyReactionApplied(string contactId, string messageId)
+        {
+            Action<string, string> handler = ReactionApplied;
+            if (handler != null) handler(contactId, messageId);
+        }
 
         // A durable transaction can publish a new message state created by a temporary service.
         internal void SignalPublishedState() { NotifyChanged(); }
@@ -320,6 +328,7 @@ namespace Rokas.Core
                 if (string.Equals(entry.reactionId ?? string.Empty, next, StringComparison.Ordinal)) return false;
                 entry.reactionId = next;
                 NotifyChanged();
+                if (next.Length > 0) NotifyReactionApplied(contactId, messageId);
                 return true;
             }
             return false;
@@ -337,6 +346,7 @@ namespace Rokas.Core
                 if (string.Equals(entry.npcReactionId ?? string.Empty, next, StringComparison.Ordinal)) return false;
                 entry.npcReactionId = next;
                 NotifyChanged();
+                if (next.Length > 0) NotifyReactionApplied(contactId, messageId);
                 return true;
             }
             return false;
@@ -797,6 +807,28 @@ namespace Rokas.Core
                 data.rosterVersion = 1;
             }
 
+            // One-time migration: old Guild chat is replaced by workshop-authored messages.
+            // Preserve contract progress, events and legacy contact records.
+            if (data.rosterVersion < 2)
+            {
+                ConversationState guild = FindConversation("guild");
+                if (guild != null)
+                {
+                    if (guild.entries != null) guild.entries.Clear();
+                    if (guild.selectedChoiceIds != null) guild.selectedChoiceIds.Clear();
+                    if (guild.completedDialogueIds != null) guild.completedDialogueIds.Clear();
+                    if (guild.liveTopicProgress != null) guild.liveTopicProgress.Clear();
+                    guild.unreadCount = 0;
+                    guild.lastSequence = 0;
+                    guild.branchState = string.Empty;
+                    guild.liveActiveTopicId = string.Empty;
+                    guild.liveFlowIdentity = string.Empty;
+                    guild.liveWaitingForChoice = false;
+                }
+                data.livePendingChains.RemoveAll(p => p != null && p.contactId == "guild");
+                data.livePendingReactions.RemoveAll(p => p != null && p.contactId == "guild");
+                data.rosterVersion = 2;
+            }
             Deduplicate(data.deliveredEventIds);
             int highestSequence = Math.Max(0, data.nextSequence);
             for (int index = data.conversations.Count - 1; index >= 0; index--)
