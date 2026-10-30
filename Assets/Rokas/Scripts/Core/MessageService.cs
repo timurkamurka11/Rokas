@@ -123,6 +123,8 @@ namespace Rokas.Core
     {
         public int nextSequence;
         public int nextLiveSequence;
+        // One-time contact-roster upgrade for existing player saves.
+        public int rosterVersion;
         public List<string> deliveredEventIds = new List<string>();
         public List<ConversationState> conversations = new List<ConversationState>();
         public List<LivePendingChainState> livePendingChains = new List<LivePendingChainState>();
@@ -158,6 +160,7 @@ namespace Rokas.Core
         private static readonly ContactDefinition[] Contacts =
         {
             new ContactDefinition("kaito", "Kaito", "Field Contact", "Messages/Portraits/Kaito", true),
+            new ContactDefinition("mina", "Mina", "Hunter Contact", "Messages/Portraits/Mina", true),
             new ContactDefinition("yumiko", "Yumiko", "YOMI Kitchen", "Messages/Portraits/Yumiko", true),
             new ContactDefinition("mika", "Mika", "Hunter Contact", "Messages/Portraits/Mika", true),
             new ContactDefinition("guild", "Guild", "Guild Dispatch", "Messages/Portraits/Guild", true),
@@ -184,7 +187,7 @@ namespace Rokas.Core
                 for (int index = 0; index < data.conversations.Count; index++)
                 {
                     ConversationState conversation = data.conversations[index];
-                    if (conversation == null || conversation.unreadCount <= 0)
+                    if (conversation == null || !IsVisibleContact(conversation.contactId) || conversation.unreadCount <= 0)
                     {
                         continue;
                     }
@@ -434,6 +437,7 @@ namespace Rokas.Core
             for (int index = 0; index < Contacts.Length; index++)
             {
                 ContactDefinition contact = Contacts[index];
+                if (!IsVisibleContact(contact.id)) continue;
                 if (needle.Length == 0 ||
                     ContainsIgnoreCase(contact.id, needle) ||
                     ContainsIgnoreCase(contact.displayName, needle) ||
@@ -451,7 +455,7 @@ namespace Rokas.Core
             for (int index = 0; index < data.conversations.Count; index++)
             {
                 ConversationState conversation = data.conversations[index];
-                if (conversation != null && !string.IsNullOrEmpty(conversation.contactId))
+                if (conversation != null && IsVisibleContact(conversation.contactId))
                 {
                     result.Add(conversation);
                 }
@@ -768,6 +772,31 @@ namespace Rokas.Core
                 if (pending.nextBubbleIndex < 0) pending.nextBubbleIndex = 0;
             }
 
+            // Clear legacy Yumiko chat history exactly once, including pending live bubbles.
+            // Preserve other conversations (including hidden story state) and delivered event IDs.
+            if (data.rosterVersion < 1)
+            {
+                ConversationState yumiko = FindConversation("yumiko");
+                if (yumiko != null)
+                {
+                    if (yumiko.entries != null) yumiko.entries.Clear();
+                    if (yumiko.selectedChoiceIds != null) yumiko.selectedChoiceIds.Clear();
+                    if (yumiko.completedDialogueIds != null) yumiko.completedDialogueIds.Clear();
+                    if (yumiko.liveTopicProgress != null) yumiko.liveTopicProgress.Clear();
+                    yumiko.unreadCount = 0;
+                    yumiko.lastSequence = 0;
+                    yumiko.branchState = string.Empty;
+                    yumiko.liveActiveTopicId = string.Empty;
+                    yumiko.liveFlowIdentity = string.Empty;
+                    yumiko.liveWaitingForChoice = false;
+                }
+                data.livePendingChains.RemoveAll(p => p != null &&
+                    string.Equals(p.contactId, "yumiko", StringComparison.Ordinal));
+                data.livePendingReactions.RemoveAll(p => p != null &&
+                    string.Equals(p.contactId, "yumiko", StringComparison.Ordinal));
+                data.rosterVersion = 1;
+            }
+
             Deduplicate(data.deliveredEventIds);
             int highestSequence = Math.Max(0, data.nextSequence);
             for (int index = data.conversations.Count - 1; index >= 0; index--)
@@ -876,6 +905,14 @@ namespace Rokas.Core
                 }
             }
             return false;
+        }
+
+        // Keep legacy IDs valid for quests/saves, but only these three appear in the laptop.
+        private static bool IsVisibleContact(string contactId)
+        {
+            return string.Equals(contactId, "mina", StringComparison.Ordinal) ||
+                   string.Equals(contactId, "yumiko", StringComparison.Ordinal) ||
+                   string.Equals(contactId, "guild", StringComparison.Ordinal);
         }
 
         private static bool KnownContact(string contactId)
