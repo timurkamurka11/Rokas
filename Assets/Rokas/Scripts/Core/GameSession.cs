@@ -566,6 +566,7 @@ namespace Rokas.Core
             MessageSaveData sourceMessages = source.messages ?? new MessageSaveData();
             targetMessages.nextSequence = sourceMessages.nextSequence;
             targetMessages.nextLiveSequence = sourceMessages.nextLiveSequence;
+            targetMessages.rosterVersion = sourceMessages.rosterVersion;
             targetMessages.deliveredEventIds = sourceMessages.deliveredEventIds;
             targetMessages.conversations = sourceMessages.conversations;
             targetMessages.livePendingChains = sourceMessages.livePendingChains;
