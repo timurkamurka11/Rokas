@@ -34,6 +34,7 @@ namespace Rokas.Presentation
         private TMP_InputField search;
         private TMP_FontAsset tmpFont;
         private ContactDefinition selected;
+        private WorkshopDialogueRuntime workshop;
         private GameObject dialogueHost;
         private MessagesYarnController yarnController;
         private MessagesDialoguePresenter dialoguePresenter;
@@ -62,6 +63,7 @@ namespace Rokas.Presentation
             Hide();
             EnsureFont();
 
+            workshop = new WorkshopDialogueRuntime(session.Messages);
             root = Surface(parent, "MessagesRoot", 38, 92, 1668, 684, 22,
                 new Color(.009f, .027f, .045f, .88f), true).rectTransform;
             Surface(root, "MessagesOuterGlow", 0, 0, 1668, 684, 22, new Color(.20f, .70f, .82f, .12f));
@@ -115,6 +117,7 @@ namespace Rokas.Presentation
             {
                 UnityEngine.Object.Destroy(dialogueHost);
             }
+            workshop = null;
             dialogueHost = null;
             yarnController = null;
             dialoguePresenter = null;
@@ -238,7 +241,7 @@ namespace Rokas.Presentation
                 ContactDefinition contact = matches[index];
                 bool isSelected = selected != null && string.Equals(selected.id, contact.id, StringComparison.Ordinal);
                 ConversationState conversation = session.Messages.GetConversation(contact.id);
-                MessageEntry last = LastEntry(conversation);
+                MessageEntry last = LastEntry(conversation, contact.id);
 
                 LaptopSurface ring = Surface(contactContent, "MessagesContactRing_" + contact.id, 0, y, 430, rowHeight, 14,
                     isSelected ? new Color(Cyan.r, Cyan.g, Cyan.b, .55f) : new Color(.20f, .42f, .49f, .18f), true);
@@ -307,10 +310,7 @@ namespace Rokas.Presentation
                 liveTopicsOpen = false;
                 reactionPickerMessageId = string.Empty;
             }
-            if (string.Equals(contact.id, "guild", StringComparison.Ordinal))
-            {
-                session.EnsureGuildContractOffer();
-            }
+            // Guild contract offers are now managed outside the authored chat UI.
             session.Messages.OpenConversation(contact.id);
             if (!wasSelected)
             {
@@ -344,10 +344,10 @@ namespace Rokas.Presentation
                     TextAlignmentOptions.MidlineLeft);
                 TmpLabel(header, "MessagesHeaderRole", selected.role, 102, 43, 440, 24, 14, Soft,
                     TextAlignmentOptions.MidlineLeft);
-                Surface(header, "MessagesHeaderStatusDot", 993, 29, 10, 10, 5,
+                Surface(header, "MessagesHeaderStatusDot", 920, 31, 10, 10, 5,
                     selected.online ? new Color(.26f, .85f, .66f) : new Color(.42f, .48f, .52f));
                 TmpLabel(header, "MessagesHeaderStatus", session.LiveMessages.GetPresenceText(selected.id),
-                    908, 18, 198, 34, 13, Soft, TextAlignmentOptions.MidlineRight);
+                    952, 18, 152, 34, 13, Soft, TextAlignmentOptions.MidlineRight);
             }
 
             BuildConversation(preserveScroll);
@@ -365,11 +365,11 @@ namespace Rokas.Presentation
 
             ConversationState conversation = session.Messages.GetConversation(selected.id);
             float y = 10;
-            if (conversation == null || conversation.entries == null || conversation.entries.Count == 0)
+            if (conversation == null || conversation.entries == null || !HasDisplayedEntries(conversation, selected.id))
             {
                 TmpLabel(conversationContent, "MessagesEmptyTitle", "Нет сообщений", 190, 104, 714, 48, 28, White,
                     TextAlignmentOptions.Center);
-                TmpLabel(conversationContent, "MessagesEmptyNote", "Выберите тему, чтобы начать разговор.",
+                TmpLabel(conversationContent, "MessagesEmptyNote", "Диалоги настраиваются в ROKAS / Messages / Dialogue Workshop.",
                     190, 152, 714, 58, 16, Soft, TextAlignmentOptions.Center);
                 y = 244;
                 BuildLiveControls(ref y);
@@ -385,6 +385,7 @@ namespace Rokas.Presentation
             for (int index = 0; index < conversation.entries.Count; index++)
             {
                 MessageEntry entry = conversation.entries[index];
+                if (!ShowEntry(entry, selected.id)) continue;
                 if (entry == null)
                 {
                     continue;
@@ -582,94 +583,60 @@ namespace Rokas.Presentation
 
         private void BuildLiveControls(ref float y)
         {
-            if (selected == null) return;
+            if (selected == null || !WorkshopDialogueRuntime.Managed(selected.id)) return;
             string contactId = selected.id;
-
-            if (session.LiveMessages.IsTyping(contactId))
+            if (workshop == null) workshop = new WorkshopDialogueRuntime(session.Messages);
+            List<WorkshopChoiceView> replies = workshop.GetChoices(contactId);
+            if (replies.Count > 0)
             {
-                y += 4;
-                LaptopSurface typing = Surface(conversationContent, "MessagesTypingIndicator", 26, y, 312, 42, 15,
-                    new Color(.035f, .10f, .13f, .96f));
-                string typingText = contactId == "guild" ? "Обработка запроса..." : "печатает...";
-                TmpLabel(typing.transform, "Label", typingText, 16, 4, 280, 34, 14, Soft,
-                    TextAlignmentOptions.MidlineLeft);
-                y += 50;
-            }
-
-            List<LiveReplyOption> replies = session.LiveMessages.GetReplyOptions(contactId);
-            if (replies != null && replies.Count > 0)
-            {
-                y += 4;
-                TmpLabel(conversationContent, "MessagesLiveChoicesCaption", "ВАШ ОТВЕТ", 26, y, 1042, 24, 12, Soft,
-                    TextAlignmentOptions.MidlineLeft);
+                y += 8;
+                TmpLabel(conversationContent, "MessagesWorkshopChoicesCaption", "ВАШ ОТВЕТ", 26, y, 1042, 24, 12, Soft, TextAlignmentOptions.MidlineLeft);
                 y += 30;
-                for (int index = 0; index < replies.Count; index++)
+                foreach (WorkshopChoiceView reply in replies)
                 {
-                    LiveReplyOption option = replies[index];
-                    string replyId = option.Id;
-                    LaptopSurface face = Surface(conversationContent, "MessagesLiveChoiceFace_" + replyId,
-                        26, y, 1042, 56, 14, new Color(.035f, .14f, .18f, .98f), true);
+                    string replyId = reply.id;
+                    LaptopSurface face = Surface(conversationContent, "MessagesWorkshopChoiceFace_" + replyId, 26, y, 1042, 56, 14,
+                        new Color(.035f, .14f, .18f, .98f), true);
                     Button button = face.gameObject.AddComponent<Button>();
-                    button.name = "MessagesLiveChoice_" + replyId;
+                    button.name = "MessagesWorkshopChoice_" + replyId;
                     StyleButton(button, face);
-                    button.onClick.AddListener(() =>
-                    {
-                        if (session.LiveMessages.SubmitReply(contactId, replyId))
-                        {
-                            liveTopicsOpen = false;
-                            RefreshActiveContact(false);
-                        }
-                    });
-                    TmpLabel(face.transform, "Label", option.Text, 18, 7, 1006, 42, 16, White,
-                        TextAlignmentOptions.MidlineLeft);
+                    button.onClick.AddListener(() => { if (workshop.Choose(contactId, replyId)) { liveTopicsOpen = false; RefreshActiveContact(false); } });
+                    TmpLabel(face.transform, "Label", reply.text, 18, 7, 1006, 42, 16, White, TextAlignmentOptions.MidlineLeft);
                     y += 64;
                 }
                 return;
             }
-
-            List<LiveTopicOption> topics = session.LiveMessages.GetTopics(contactId);
-            if (topics == null || topics.Count == 0) return;
+            List<WorkshopTopicView> topics = workshop.GetTopics(contactId);
+            if (topics.Count == 0) return;
             y += 6;
             if (!liveTopicsOpen)
             {
-                string launcherText = contactId == "guild" ? "Отправить запрос" :
-                    contactId == "kaito" ? "Написать Кайто" : "Написать Юмико";
-                LaptopSurface face = Surface(conversationContent, "MessagesLiveLauncherFace_" + contactId,
-                    26, y, 1042, 58, 15, new Color(.035f, .16f, .19f, .98f), true);
-                Button launcher = face.gameObject.AddComponent<Button>();
-                launcher.name = "MessagesLiveLauncher_" + contactId;
-                StyleButton(launcher, face);
-                launcher.onClick.AddListener(() =>
-                {
-                    liveTopicsOpen = true;
-                    RefreshActiveContact(false);
-                });
-                TmpLabel(face.transform, "Label", launcherText, 18, 8, 1006, 42, 16, White,
-                    TextAlignmentOptions.Center);
+                LaptopSurface face = Surface(conversationContent, "MessagesWorkshopLauncherFace_" + contactId, 26, y, 1042, 58, 15,
+                    new Color(.035f, .16f, .19f, .98f), true);
+                Button button = face.gameObject.AddComponent<Button>();
+                button.name = "MessagesWorkshopLauncher_" + contactId;
+                StyleButton(button, face);
+                button.onClick.AddListener(() => { liveTopicsOpen = true; RefreshActiveContact(false); });
+                TmpLabel(face.transform, "Label", "Написать сообщение", 18, 8, 1006, 42, 16, White, TextAlignmentOptions.Center);
                 y += 66;
                 return;
             }
-
-            TmpLabel(conversationContent, "MessagesLiveTopicsCaption", contactId == "guild" ? "ЗАПРОСЫ" : "ТЕМЫ",
-                26, y, 1042, 24, 12, Soft, TextAlignmentOptions.MidlineLeft);
+            TmpLabel(conversationContent, "MessagesWorkshopTopicsCaption", "ТЕМЫ", 26, y, 1042, 24, 12, Soft,
+                TextAlignmentOptions.MidlineLeft);
             y += 30;
-            for (int index = 0; index < topics.Count; index++)
+            foreach (WorkshopTopicView topic in topics)
             {
-                LiveTopicOption option = topics[index];
-                string topicId = option.Id;
-                LaptopSurface face = Surface(conversationContent, "MessagesLiveTopicFace_" + topicId,
-                    26, y, 1042, 54, 14, new Color(.028f, .115f, .15f, .98f), true);
+                string topicId = topic.id;
+                LaptopSurface face = Surface(conversationContent, "MessagesWorkshopTopicFace_" + topicId, 26, y, 1042, 54, 14,
+                    new Color(.028f, .115f, .15f, .98f), true);
                 Button button = face.gameObject.AddComponent<Button>();
-                button.name = "MessagesLiveTopic_" + topicId;
+                button.name = "MessagesWorkshopTopic_" + topicId;
                 StyleButton(button, face);
                 button.onClick.AddListener(() =>
                 {
-                    liveTopicsOpen = false;
-                    if (session.LiveMessages.StartTopic(contactId, topicId))
-                        RefreshActiveContact(false);
+                    if (workshop.StartTopic(contactId, topicId)) { liveTopicsOpen = false; RefreshActiveContact(false); }
                 });
-                TmpLabel(face.transform, "Label", option.Text, 18, 6, 1006, 42, 15, White,
-                    TextAlignmentOptions.MidlineLeft);
+                TmpLabel(face.transform, "Label", topic.title, 18, 6, 1006, 42, 15, White, TextAlignmentOptions.MidlineLeft);
                 y += 62;
             }
         }
@@ -817,13 +784,24 @@ namespace Rokas.Presentation
             return ordered;
         }
 
-        private static MessageEntry LastEntry(ConversationState conversation)
+        private static bool ShowEntry(MessageEntry entry, string contactId)
         {
-            if (conversation == null || conversation.entries == null || conversation.entries.Count == 0)
-            {
-                return null;
-            }
-            return conversation.entries[conversation.entries.Count - 1];
+            return entry != null && (contactId != "guild" ||
+                (!string.IsNullOrEmpty(entry.eventId) && entry.eventId.StartsWith("workshop:", StringComparison.Ordinal)));
+        }
+        private static bool HasDisplayedEntries(ConversationState c, string contactId)
+        {
+            if (c == null || c.entries == null) return false;
+            for (int i = 0; i < c.entries.Count; i++)
+                if (ShowEntry(c.entries[i], contactId)) return true;
+            return false;
+        }
+        private static MessageEntry LastEntry(ConversationState c, string contactId)
+        {
+            if (c == null || c.entries == null) return null;
+            for (int i = c.entries.Count - 1; i >= 0; i--)
+                if (ShowEntry(c.entries[i], contactId)) return c.entries[i];
+            return null;
         }
 
         private void EnsureFont()
