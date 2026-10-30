@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "contacts": [
+    { "contactId": "mina", "topics": [] },
+    { "contactId": "yumiko", "topics": [] },
+    { "contactId": "guild", "topics": [] }
+  ]
+}
