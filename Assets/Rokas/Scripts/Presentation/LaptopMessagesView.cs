@@ -20,7 +20,7 @@ namespace Rokas.Presentation
         private static readonly Color PanelSoft = new Color(.025f, .061f, .09f, .91f);
         private static readonly Color Selected = new Color(.055f, .16f, .21f, .98f);
         private static readonly string[] PreferredContactOrder =
-            { "kaito", "guild", "yumiko", "mika", "unknown", "merchant" };
+            { "mina", "yumiko", "guild" };
 
         private readonly UiKit ui;
         private readonly RokasAssets assets;
