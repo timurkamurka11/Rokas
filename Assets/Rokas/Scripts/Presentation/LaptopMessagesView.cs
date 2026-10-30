@@ -369,7 +369,7 @@ namespace Rokas.Presentation
             {
                 TmpLabel(conversationContent, "MessagesEmptyTitle", "Нет сообщений", 190, 104, 714, 48, 28, White,
                     TextAlignmentOptions.Center);
-                TmpLabel(conversationContent, "MessagesEmptyNote", "Диалоги настраиваются в ROKAS / Messages / Dialogue Workshop.",
+                TmpLabel(conversationContent, "MessagesEmptyNote", "Этот разговор ещё не начат.",
                     190, 152, 714, 58, 16, Soft, TextAlignmentOptions.Center);
                 y = 244;
                 BuildLiveControls(ref y);
