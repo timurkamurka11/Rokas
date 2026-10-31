@@ -24,6 +24,15 @@ namespace Rokas.Presentation
         private readonly Type stateType;
         private bool released;
         private readonly bool usesV10;
+        // V10 has its own isolated light rig. Keep original authored values
+        // for the ON scene; only instantiated lights are changed.
+        private Light warmKey;
+        private Light coolRim;
+        private Light watchBounce;
+        private float originalWarmIntensity;
+        private float originalRimIntensity;
+        private bool roomLightOn = true;
+        private float watchRaiseAmount;
 
         public RenderTexture Texture => target;
         public bool Ready => !released && controller != null && camera != null;
@@ -49,7 +58,7 @@ namespace Rokas.Presentation
             // Prefer the ACTUAL Unity-imported V10 25-bone arm + seven-piece watch.
             // If native CI has not generated the resource prefab, keep the
             // pre-existing V3/2D behaviour completely intact.
-            var v10 = TryCreateV10(currentClockHours);
+            var v10 = TryCreateV10(currentClockHours, lampOn);
             if (v10 != null) return v10;
             // A missing installer must NEVER break the existing hub.
             Type controllerType = FindType("ROKAS.BedSleep.BedSleepCinematicController");
@@ -137,6 +146,7 @@ namespace Rokas.Presentation
 
                 var result = new RokasBedSleepProductionRigBridge(
                     container, cam, rt, script, oled, arm, watch, phaseType);
+                result.ConfigureSleepLighting();
                 result.ChangeState("LyingViewActive");
                 result.SetLight(lampOn);
                 result.ConfigureClock(currentClockHours);
@@ -153,7 +163,7 @@ namespace Rokas.Presentation
         }
 
 
-        private static RokasBedSleepProductionRigBridge TryCreateV10(float clock)
+        private static RokasBedSleepProductionRigBridge TryCreateV10(float clock, bool lampOn)
         {
             const string resource = "BedSleep/V10ReleaseCandidate/PF_BedSleep_3DComposite_V10_Candidate";
             GameObject prefab = Resources.Load<GameObject>(resource);
@@ -195,7 +205,9 @@ namespace Rokas.Presentation
                 var bridge = new RokasBedSleepProductionRigBridge(
                     instance, cam, rt, composite, display, rig, watch3d, null, true);
                 bridge.ConfigureClock(clock);
+                bridge.ConfigureSleepLighting();
                 bridge.ChangeState("LyingViewActive");
+                bridge.SetLight(lampOn);
                 return bridge;
             }
             catch (Exception e)
@@ -232,6 +244,9 @@ namespace Rokas.Presentation
         public void Sample(float normalized)
         {
             if (!Ready) return;
+            // Brightness follows the real raise/lower progress, not a timer.
+            watchRaiseAmount = Mathf.Clamp01(normalized);
+            UpdateWatchBounce();
             // V10 uses imported FBX animation clips, not the old procedural sampler.
             if (usesV10) return;
             Call(controller, "SampleSkeletalRaiseProgress",
@@ -351,11 +366,64 @@ namespace Rokas.Presentation
             if (!Ready) return;
         }
 
+        private void ConfigureSleepLighting()
+        {
+            if (!Ready || root == null) return;
+            foreach (Light light in root.GetComponentsInChildren<Light>(true))
+            {
+                if (light.name == "WarmPaperLanternKey" || light.name == "WarmKeyLight")
+                {
+                    warmKey = light;
+                    originalWarmIntensity = light.intensity;
+                }
+                else if (light.name == "ColdWindowRim" || light.name == "WindowCyanRim")
+                {
+                    coolRim = light;
+                    originalRimIntensity = light.intensity;
+                }
+            }
+
+            // Parent to the REAL OLED renderer, so the bounce follows every
+            // rig/animation pose. Its isolated layer cannot light the hub.
+            Renderer screen = GetProperty(watch,
+                usesV10 ? "OledRenderer" : "OledDisplayRenderer") as Renderer;
+            if (screen == null || camera == null) return;
+            var bounceObject = new GameObject("ROKAS_Watch_OLED_Bounce_NightOnly");
+            bounceObject.layer = RigLayer;
+            bounceObject.transform.SetParent(screen.transform, false);
+            Vector3 screenCenter = screen.bounds.center;
+            Vector3 toViewer = (camera.transform.position - screenCenter).normalized;
+            bounceObject.transform.position = screenCenter + toViewer * .018f;
+            watchBounce = bounceObject.AddComponent<Light>();
+            watchBounce.type = LightType.Point;
+            // Same cool LCD bounce family as LaptopCinematicLightPresentation.
+            watchBounce.color = new Color(.20f, .67f, 1f);
+            watchBounce.intensity = 0f;
+            watchBounce.range = .32f;
+            watchBounce.shadows = LightShadows.None;
+            watchBounce.cullingMask = 1 << RigLayer;
+            watchBounce.enabled = false;
+        }
+
+        private void UpdateWatchBounce()
+        {
+            if (watchBounce == null) return;
+            float strength = !roomLightOn ? Mathf.SmoothStep(0f, 1f, watchRaiseAmount) : 0f;
+            watchBounce.enabled = strength > .005f;
+            watchBounce.intensity = .82f * strength;
+        }
+
         public void SetLight(bool on)
         {
             if (!Ready) return;
-            if (usesV10) return; // Imported composite owns its authored key and rim lights.
-            Call(controller, "SyncRoomLightingState", on);
+            roomLightOn = on;
+            if (!usesV10)
+                Call(controller, "SyncRoomLightingState", on);
+            if (warmKey != null)
+                warmKey.intensity = on ? originalWarmIntensity : originalWarmIntensity * .035f;
+            if (coolRim != null)
+                coolRim.intensity = on ? originalRimIntensity : originalRimIntensity * .22f;
+            UpdateWatchBounce();
         }
 
         public void Dispose()
