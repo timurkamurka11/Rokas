@@ -55,6 +55,11 @@ namespace Rokas.Presentation
         private bool committed, cancelRequested, armWatchAvailable;
         private float elapsedVisual;
         private float handOpacity;
+        // Snapshot of the real hub lamp at the instant the bed is used.
+        // No new lighting flag is saved or exposed to the player.
+        private bool lightsOffAtBedEntry;
+        private RawImage fallbackWatchGlow;
+        private Texture2D fallbackGlowTexture;
 
         public State CurrentState => state;
         public bool Active => state != State.Idle;
@@ -110,6 +115,7 @@ namespace Rokas.Presentation
                 ? Mathf.Repeat(session.State.hubClockHours, 24f) : 23.5f;
             startDay = session.State.hubSleepInitialized
                 ? Mathf.Max(1, session.State.hubDay) : 1;
+            lightsOffAtBedEntry = !session.State.lampOn;
             elapsedVisual = handOpacity = 0f;
             BuildOverlay();
             sequence = runner.StartCoroutine(Play());
@@ -235,11 +241,19 @@ namespace Rokas.Presentation
             ui.Box(root, "SleepModalInputBlocker", 0, 0, 1920, 1080,
                 new Color(0f, 0f, 0f, .001f), true);
 
-            var ceiling = Resources.Load<Texture2D>(
+            var dayCeiling = Resources.Load<Texture2D>(
                 "BedSleep/BedCeilingPOV");
+            var nightCeiling = lightsOffAtBedEntry
+                ? Resources.Load<Texture2D>("BedSleep/BedCeilingPOV_LightsOff") : null;
+            if (lightsOffAtBedEntry && nightCeiling == null)
+                Debug.LogWarning("ROKAS BedSleep: lights-off ceiling PNG missing; " +
+                    "install Resources/BedSleep/BedCeilingPOV_LightsOff.png");
+            var ceiling = nightCeiling != null ? nightCeiling : dayCeiling;
             var arm = Resources.Load<Texture2D>(
                 "BedSleep/BedWatchArmPOV");
-            var soft = Resources.Load<Texture2D>(
+            // The day blur was authored for a different exposure and must
+            // never wash the night reference with bright ceiling pixels.
+            var soft = lightsOffAtBedEntry ? null : Resources.Load<Texture2D>(
                 "BedSleep/BedCeilingPOV_Soft");
             armWatchAvailable = ceiling != null && arm != null;
 
@@ -262,7 +276,7 @@ namespace Rokas.Presentation
             // place the REAL skinned 3D hand/watch above the ceiling plate.
             // Without it the previous photo presentation remains available.
             productionRig = RokasBedSleepProductionRigBridge.TryCreate(
-                startHours, session.State.lampOn);
+                startHours, !lightsOffAtBedEntry);
             if (productionRig != null && productionRig.Ready)
             {
                 real3DArmPov = ui.Art(root,
@@ -275,6 +289,18 @@ namespace Rokas.Presentation
                 armWatchAvailable = true;
                 Debug.Log("[ROKAS BedSleep V3] REAL 25-bone 3D arm and " +
                     "OLED watch composite active");
+            }
+
+            // Genuine V10 hand/watch uses a real OLED-bound point light.
+            // If an older installation has only the flat POV artwork, use
+            // a restrained blue radial bounce around its actual watch area.
+            if (lightsOffAtBedEntry && (productionRig == null || !productionRig.Ready) && arm != null)
+            {
+                fallbackGlowTexture = MakeNightWatchBounceTexture();
+                fallbackWatchGlow = ui.Art(root, "BedSleep_NightWatchBounce_2DFallback",
+                    fallbackGlowTexture, 725, 510, 350, 395);
+                fallbackWatchGlow.raycastTarget = false;
+                fallbackWatchGlow.color = new Color(.22f, .67f, 1f, 0f);
             }
 
             if (!armWatchAvailable)
@@ -496,7 +522,10 @@ namespace Rokas.Presentation
                     armPov.color = new Color(1f, 1f, 1f, 0f);
                 }
                 else
-                    armPov.color = new Color(1f, 1f, 1f, handOpacity);
+                    armPov.color = lightsOffAtBedEntry
+                        ? new Color(.40f, .55f, .70f, handOpacity)
+                        : new Color(1f, 1f, 1f, handOpacity);
+                SetFallbackWatchBounce(handOpacity);
                 if (blurredPov != null)
                     blurredPov.color = new Color(1f, 1f, 1f,
                         .12f * handOpacity);
@@ -512,7 +541,10 @@ namespace Rokas.Presentation
                 armPov.color = new Color(1f, 1f, 1f, 0f);
             }
             else
-                armPov.color = new Color(1f, 1f, 1f, to);
+                armPov.color = lightsOffAtBedEntry
+                    ? new Color(.40f, .55f, .70f, to)
+                    : new Color(1f, 1f, 1f, to);
+            SetFallbackWatchBounce(to);
             if (blurredPov != null)
                 blurredPov.color = new Color(1f, 1f, 1f, .12f * to);
         }
@@ -584,6 +616,35 @@ namespace Rokas.Presentation
                     ClockText(WakeHour(startHours, selectedHours));
         }
 
+        private void SetFallbackWatchBounce(float raise)
+        {
+            if (fallbackWatchGlow != null)
+                fallbackWatchGlow.color = new Color(.22f, .67f, 1f,
+                    lightsOffAtBedEntry ? .19f * Mathf.Clamp01(raise) : 0f);
+        }
+
+        private static Texture2D MakeNightWatchBounceTexture()
+        {
+            const int size = 128;
+            var image = new Texture2D(size, size, TextureFormat.RGBA32, false, true);
+            image.name = "ROKAS_BedSleep_WatchBounce_NightOnly";
+            image.wrapMode = TextureWrapMode.Clamp;
+            image.filterMode = FilterMode.Bilinear;
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + .5f - size * .5f) / (size * .5f);
+                float dy = (y + .5f - size * .5f) / (size * .5f);
+                float radial = Mathf.Clamp01(1f - dx * dx - dy * dy);
+                byte alpha = (byte)Mathf.RoundToInt(255f * radial * radial * radial);
+                pixels[y * size + x] = new Color32(255, 255, 255, alpha);
+            }
+            image.SetPixels32(pixels);
+            image.Apply(false, true);
+            return image;
+        }
+
         private void PlayTick()
         {
             if (audio == null || tickClip == null) return;
@@ -633,6 +694,10 @@ namespace Rokas.Presentation
             if (tickClip != null)
                 UnityEngine.Object.Destroy(tickClip);
             tickClip = null;
+            if (fallbackGlowTexture != null)
+                UnityEngine.Object.Destroy(fallbackGlowTexture);
+            fallbackGlowTexture = null;
+            fallbackWatchGlow = null;
             alarmControls = watchControls = null;
             alarmButton = confirmButton = null;
             armPov = lyingPov = blurredPov = null;
