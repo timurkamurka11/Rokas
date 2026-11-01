@@ -606,6 +606,7 @@ namespace Rokas.Presentation
             if (panel == "settings")
             {
                 SettingsPanel.Build(ui, panels, session.State.settings, () => { owner.ApplyDisplaySettings(); save(); }, ClosePanel, () => { save(); Application.Quit(); });
+                RokasCyberSettingsFinalCleanup.Apply(panels);
                 FocusFirst(panels);
                 return;
             }
