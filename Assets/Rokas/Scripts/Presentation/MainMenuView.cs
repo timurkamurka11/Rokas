@@ -69,6 +69,7 @@ namespace Rokas.Presentation
             root.offsetMax = Vector2.zero;
 
             CreateVideoSurface(root);
+            gameObject.AddComponent<RokasCyberNewGameConfirmationSkin>(); // V9.1
             CreateButton(root, "EnterWorldButton", "▶", "ВОЙТИ В МИР", 48f, true, EnterWorld);
             CreateButton(root, "DevelopersButton", string.Empty, "О РАЗРАБОТЧИКАХ", -54f, false, SecondaryAction);
             CreateButton(root, "SupportDevelopmentButton", "♥", "ПОДДЕРЖАТЬ РАЗРАБОТКУ", -156f, false, SecondaryAction);

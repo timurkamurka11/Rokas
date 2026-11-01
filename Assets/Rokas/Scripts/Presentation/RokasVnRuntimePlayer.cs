@@ -491,6 +491,7 @@ namespace Rokas.Presentation
                 typeof(CanvasScaler),
                 typeof(GraphicRaycaster));
             root.transform.SetParent(parent, false);
+            root.AddComponent<RokasVnFastForwardIconBinder>(); // V9.1
             Stretch((RectTransform)root.transform);
 
             Canvas canvas = root.GetComponent<Canvas>();
